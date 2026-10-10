@@ -1,0 +1,110 @@
+[
+ {
+  "state": "open",
+  "date": "2026-09-12",
+  "reference": "2627008",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "OV-reizen"
+  },
+  "details": [
+   {
+    "project_id": "500529610110272779",
+    "description": "Treinreis commissie studiereis, overleg met reisbureau",
+    "total_price_excl_tax_with_discount": "35.23",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-02",
+  "reference": "2627018 E1207",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Pizzeria Il Codice"
+  },
+  "details": [
+   {
+    "project_id": "500529609409823981",
+    "description": "Pizza's voor deelnemers hackathon [E1207]",
+    "total_price_excl_tax_with_discount": "263.76",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-07",
+  "reference": "2627023 E1208",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Pizzeria Il Codice"
+  },
+  "details": [
+   {
+    "project_id": "500557434166707306",
+    "description": "Bitterballen [E1208]",
+    "total_price_excl_tax_with_discount": "40.0",
+    "period": null
+   },
+   {
+    "project_id": "500557435059045484",
+    "description": "Servetten [E1208]",
+    "total_price_excl_tax_with_discount": "5.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-30",
+  "reference": "2627024 E1213",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Daan Bakker"
+  },
+  "details": [
+   {
+    "project_id": "500618042348143841",
+    "description": "Prijzen pubquiz (declaratie Daan Bakker) [E1213]",
+    "total_price_excl_tax_with_discount": "32.11",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-30",
+  "reference": "2627025 E1211",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Lisa Jansen"
+  },
+  "details": [
+   {
+    "project_id": "500620623296333214",
+    "description": "Snacks en drinken spelletjesavond (declaratie Lisa Jansen) [E1211]",
+    "total_price_excl_tax_with_discount": "16.97",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-07",
+  "reference": "2627028 E1212",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Sophie de Vries"
+  },
+  "details": [
+   {
+    "project_id": "500530791303874437",
+    "description": "Lunch deelnemers lunchlezing Datadijk (declaratie Sophie de Vries) [E1212]",
+    "total_price_excl_tax_with_discount": "57.25",
+    "period": null
+   }
+  ]
+ }
+]

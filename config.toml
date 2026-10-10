@@ -1,0 +1,87 @@
+# Configuratie voor jaarverslag.py
+#
+# Projecten in Moneybird heten "CODE - omschrijving", bijvoorbeeld
+# "C101 - Borrel drinks kwartaal 1". Het cijfer na de C bepaalt de
+# categorie (tabel), de volledige code bepaalt de regel in die tabel.
+# Alle projecten met dezelfde code worden bij elkaar opgeteld.
+# De codes en regelnamen staan in codes.csv.
+
+administration_id = "500528313044830083"   # Thalia Sandbox
+
+[layout]
+# Regels zonder budget en zonder boekingen weglaten uit de tabellen.
+hide_empty_rows = true
+# Code voor de regelnaam tonen, bijvoorbeeld "202 iCIS borrels".
+show_codes = false
+# Getalnotatie: 1,234.56 (zoals in eerdere verslagen).
+thousands_separator = ","
+decimal_separator = "."
+
+# Volgorde hier = volgorde in de overzichtstabel.
+[[categories]]
+digit = "1"
+name = "Borrels"
+file = "borrels"
+
+[[categories]]
+digit = "2"
+name = "Events"
+file = "events"
+
+[[categories]]
+digit = "3"
+name = "General"
+file = "general"
+
+[[categories]]
+digit = "4"
+name = "Board"
+file = "board"
+
+[[categories]]
+digit = "5"
+name = "Incidental earnings and losses"
+file = "incidental"
+
+[partners]
+# Factuur- en offerteregels met deze projectcodes tellen mee in de
+# partnertabellen (Invoice sent / Signed / Created).
+codes = ["C310"]
+
+[events]
+# Evenementen staan als label [E<id>] in de omschrijving van een boekregel of in de
+# documentnaam (zoals concrexit pusht), met het event-id uit concrexit. Naam, datum en
+# organizer komen uit events.csv (export uit concrexit); per organizer komt er een
+# tabel met zijn evenementen en hun resultaat.
+#
+# Codes waar elke boekregel een label hoort te hebben. Regels zonder label onder deze
+# codes komen op de waarschuwingenlijst. Andere codes (bijv. C208, dat is één evenement)
+# hoeven geen label, maar een label telt daar wel mee.
+label_codes = [
+    "C101", "C102", "C103",   # BorrelCie: drinks, snacks, decoration
+    "C104",                   # Alumni borrels
+    "C106",                   # Other borrels
+    "C201",                   # Events committee
+    "C202",                   # Turing committee
+    "C204",                   # First year committee
+    "C211",                   # Wine tasting
+    "C212",                   # Lunch lectures
+    "C214",                   # Introduction week
+    "C215",                   # Societies
+    "C216",                   # Other events
+    "C217",                   # Lustrum
+    "C303",                   # Committee clothing
+    "C307",                   # Committee activity
+]
+
+# Waarschuwing als de boekingsdatum meer dan zoveel dagen van de evenementdatum afligt.
+max_days = 60
+
+# Optioneel: nettere namen voor de organizers uit events.csv in het verslag.
+[events.organizers]
+CAD = "BorrelCie"
+EVC = "Events Committee"
+TURINGCIE = "Turing Committee"
+PARTNERCIE = "Partner Committee"
+TECHNICIE = "TechniCie"
+ALU = "Alumni"

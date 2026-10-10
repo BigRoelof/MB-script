@@ -1,0 +1,434 @@
+[
+ {
+  "state": "late",
+  "date": "2026-09-04",
+  "reference": "2627001 E1201",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Café De Compiler"
+  },
+  "details": [
+   {
+    "project_id": "500530792658634714",
+    "description": "Introductieborrel eerstejaars: consumpties [E1201]",
+    "total_price_excl_tax_with_discount": "520.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "late",
+  "date": "2026-09-05",
+  "reference": "2627002",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "DataWolk Hosting"
+  },
+  "details": [
+   {
+    "project_id": "500530794071065816",
+    "description": "Hosting website en ledenadministratie Q3, incl. domeinnaam",
+    "total_price_excl_tax_with_discount": "89.85",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-05",
+  "reference": "2627003",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "DataWolk Hosting"
+  },
+  "details": [
+   {
+    "project_id": "500557441227818159",
+    "description": "Boekhoudsoftware abonnement",
+    "total_price_excl_tax_with_discount": "25.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "late",
+  "date": "2026-09-08",
+  "reference": "2627004",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Textielbedrukkerij De Naald"
+  },
+  "details": [
+   {
+    "project_id": "500533746989008133",
+    "description": "Bestuurskleding 2026-2027 (6 sets)",
+    "total_price_excl_tax_with_discount": "1150.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "late",
+  "date": "2026-09-10",
+  "reference": "2627005",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Café De Compiler"
+  },
+  "details": [
+   {
+    "project_id": "500533747629688152",
+    "description": "Constitutieborrel bestuur 2026-2027",
+    "total_price_excl_tax_with_discount": "640.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-10",
+  "reference": "2627006",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Textielbedrukkerij De Naald"
+  },
+  "details": [
+   {
+    "project_id": "500557438500471944",
+    "description": "Inkoop merchandise",
+    "total_price_excl_tax_with_discount": "600.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-12",
+  "reference": "2627007",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Drukkerij Van Os"
+  },
+  "details": [
+   {
+    "project_id": "500557442037318834",
+    "description": "Printpapier en pennen",
+    "total_price_excl_tax_with_discount": "63.5",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-18",
+  "reference": "2627009 E1202",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Pizzeria Il Codice"
+  },
+  "details": [
+   {
+    "project_id": "500557434166707306",
+    "description": "Borrelsnacks [E1202]",
+    "total_price_excl_tax_with_discount": "85.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-20",
+  "reference": "2627010 E1202",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Drukkerij Van Os"
+  },
+  "details": [
+   {
+    "project_id": "500557435059045484",
+    "description": "Versiering borrel [E1202]",
+    "total_price_excl_tax_with_discount": "40.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-25",
+  "reference": "2627011 E1204",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Pizzeria Il Codice"
+  },
+  "details": [
+   {
+    "project_id": "500557436748301442",
+    "description": "Diner Turing Committee [E1204]",
+    "total_price_excl_tax_with_discount": "150.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-25",
+  "reference": "2627012 E1202",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Café De Compiler"
+  },
+  "details": [
+   {
+    "project_id": "500533745550361743",
+    "description": "Drankjes bar [E1202]",
+    "total_price_excl_tax_with_discount": "120.0",
+    "period": null
+   },
+   {
+    "project_id": "500557435059045484",
+    "description": "Versiering [E1202]",
+    "total_price_excl_tax_with_discount": "40.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "late",
+  "date": "2026-09-26",
+  "reference": "2627013 E1203",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Café De Compiler"
+  },
+  "details": [
+   {
+    "project_id": "500533746294850766",
+    "description": "iCIS borrel kwartaal 1: consumpties en bitterballen [E1203]",
+    "total_price_excl_tax_with_discount": "300.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-28",
+  "reference": "2627014 E1205",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Drukkerij Van Os"
+  },
+  "details": [
+   {
+    "project_id": "500529609409823981",
+    "description": "Posters, flyers en bedrijvengids bedrijvendag 2026 [E1205]",
+    "total_price_excl_tax_with_discount": "214.5",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-28",
+  "reference": "2627015",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "OV-reizen"
+  },
+  "details": [
+   {
+    "project_id": "500557437721379972",
+    "description": "Reiskosten Thalia Weekend",
+    "total_price_excl_tax_with_discount": "310.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-30",
+  "reference": "2627016 E1202",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Café De Compiler"
+  },
+  "details": [
+   {
+    "project_id": "500533745550361743",
+    "description": "Maandborrel september: consumpties [E1202]",
+    "total_price_excl_tax_with_discount": "350.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-02",
+  "reference": "2627017 E1206",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Café De Compiler"
+  },
+  "details": [
+   {
+    "project_id": "500557435955577984",
+    "description": "Alumniborrel zaalhuur en drankjes [E1206]",
+    "total_price_excl_tax_with_discount": "220.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-05",
+  "reference": "2627019",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Drukkerij Van Os"
+  },
+  "details": [
+   {
+    "project_id": "500557439424267413",
+    "description": "Drukkosten Thabloid",
+    "total_price_excl_tax_with_discount": "420.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-06",
+  "reference": "2627020",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "DataWolk Hosting"
+  },
+  "details": [
+   {
+    "project_id": "500557442803827893",
+    "description": "Afgeschreven onbetaalde vordering",
+    "total_price_excl_tax_with_discount": "35.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-07",
+  "reference": "2627021 E1208",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Café De Compiler"
+  },
+  "details": [
+   {
+    "project_id": "500533745550361743",
+    "description": "Maandborrel oktober: consumpties [E1208]",
+    "total_price_excl_tax_with_discount": "260.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-07",
+  "reference": "2627022 E1208",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Café De Compiler"
+  },
+  "details": [
+   {
+    "project_id": "500533745550361743",
+    "description": "Drankjes bar [E1208]",
+    "total_price_excl_tax_with_discount": "180.0",
+    "period": null
+   },
+   {
+    "project_id": "500557434166707306",
+    "description": "Borrelhapjes [E1208]",
+    "total_price_excl_tax_with_discount": "60.0",
+    "period": null
+   },
+   {
+    "project_id": "500533745550361743",
+    "description": "Losse consumpties [E1208]",
+    "total_price_excl_tax_with_discount": "25.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-30",
+  "reference": "2627026 E1213",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Café De Compiler"
+  },
+  "details": [
+   {
+    "project_id": "500618042348143841",
+    "description": "Drankinkoop pubquiz [E1213]",
+    "total_price_excl_tax_with_discount": "95.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-02",
+  "reference": "2627027 E1212",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Drukkerij Van Os"
+  },
+  "details": [
+   {
+    "project_id": "500530791303874437",
+    "description": "Posters lunchlezing Datadijk [E1212]",
+    "total_price_excl_tax_with_discount": "45.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-08",
+  "reference": "2627029 E1210",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "Wijnhandel De Druif"
+  },
+  "details": [
+   {
+    "project_id": "500620622387217801",
+    "description": "Wijnpakket proeverij, 6 soorten [E1210]",
+    "total_price_excl_tax_with_discount": "180.0",
+    "period": null
+   },
+   {
+    "project_id": "500620622387217801",
+    "description": "Kaasplankjes [E1210]",
+    "total_price_excl_tax_with_discount": "60.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-01",
+  "reference": "2627030",
+  "revenue_invoice": false,
+  "contact": {
+   "company_name": "DataWolk Hosting"
+  },
+  "details": [
+   {
+    "project_id": "500530794071065816",
+    "description": "Hosting website en ledenadministratie Q4",
+    "total_price_excl_tax_with_discount": "89.85",
+    "period": null
+   }
+  ]
+ }
+]

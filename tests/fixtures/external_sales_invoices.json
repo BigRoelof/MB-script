@@ -1,0 +1,386 @@
+[
+ {
+  "state": "open",
+  "date": "2026-10-09",
+  "reference": "Karaoke with EVC [43501] [E1234]",
+  "contact": {
+   "company_name": "Jane Smith"
+  },
+  "details": [
+   {
+    "project_id": "500618042348143841",
+    "description": "Event registration Karaoke with EVC. Oct. 15, 2026. Registration date: Oct. 9, 2026.",
+    "total_price_excl_tax_with_discount": "4.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-08",
+  "reference": "Karaoke with EVC [43494] [E1234]",
+  "contact": {
+   "company_name": "John Doe"
+  },
+  "details": [
+   {
+    "project_id": "500618042348143841",
+    "description": "Event registration Karaoke with EVC. Oct. 15, 2026. Registration date: Oct. 8, 2026.",
+    "total_price_excl_tax_with_discount": "4.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-06",
+  "reference": "Sales at Shift 162 - Maandborrel Oktober (3bd45b09-8752-4a8b-a223-411f0548418c) [E1208]",
+  "contact": {
+   "company_name": "Unknown Payer"
+  },
+  "details": [
+   {
+    "project_id": "500533745550361743",
+    "description": "3x Hertog Jan. Ordered at 17:48:10.402871",
+    "total_price_excl_tax_with_discount": "6.2",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-06",
+  "reference": "Sales at Shift 162 - Maandborrel Oktober (14dfb1af-cf77-4c87-a3c9-dbd06841f50a) [E1208]",
+  "contact": {
+   "company_name": "Jane Smith"
+  },
+  "details": [
+   {
+    "project_id": "500533745550361743",
+    "description": "1x Fritz-kola. Ordered at 19:02:55.871204",
+    "total_price_excl_tax_with_discount": "2.31",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-06",
+  "reference": "Food Maandborrel Oktober [9188] [E1208]",
+  "contact": {
+   "company_name": "John Doe"
+  },
+  "details": [
+   {
+    "project_id": "500557434166707306",
+    "description": "Food order by John Doe for Maandborrel Oktober",
+    "total_price_excl_tax_with_discount": "6.8",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-28",
+  "reference": "Hackathon [43311] [E1207]",
+  "contact": {
+   "company_name": "Jane Smith"
+  },
+  "details": [
+   {
+    "project_id": "500529609409823981",
+    "description": "Event registration Hackathon. Oct. 2, 2026. Registration date: Sep. 28, 2026.",
+    "total_price_excl_tax_with_discount": "5.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-20",
+  "reference": "Alumniborrel [43102] [E1206]",
+  "contact": {
+   "company_name": "John Doe"
+  },
+  "details": [
+   {
+    "project_id": "500557435955577984",
+    "description": "Event registration Alumniborrel. Oct. 1, 2026. Registration date: Sep. 20, 2026.",
+    "total_price_excl_tax_with_discount": "10.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-17",
+  "reference": "Sales at Shift 150 - Maandborrel September (501c4225-9d99-44b2-8894-9bd116714693) [E1202]",
+  "contact": {
+   "company_name": "Unknown Payer"
+  },
+  "details": [
+   {
+    "project_id": "500533745550361743",
+    "description": "1x Desperados. Ordered at 16:32:29.523903",
+    "total_price_excl_tax_with_discount": "2.89",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-17",
+  "reference": "Sales at Shift 150 - Maandborrel September (31a9eae6-50e1-4b21-83fb-9bf25a16021d) [E1202]",
+  "contact": {
+   "company_name": "John Doe"
+  },
+  "details": [
+   {
+    "project_id": "500533745550361743",
+    "description": "2x Hertog Jan. Ordered at 21:14:02.118734",
+    "total_price_excl_tax_with_discount": "4.13",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-17",
+  "reference": "Food Maandborrel September [9107] [E1202]",
+  "contact": {
+   "company_name": "Jane Smith"
+  },
+  "details": [
+   {
+    "project_id": "500557434166707306",
+    "description": "Food order by Jane Smith for Maandborrel September",
+    "total_price_excl_tax_with_discount": "7.2",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-12",
+  "reference": "Turing diner [43260] [E1204]",
+  "contact": {
+   "company_name": "Jane Smith"
+  },
+  "details": [
+   {
+    "project_id": "500557436748301442",
+    "description": "Event registration Turing diner. Sep. 24, 2026. Registration date: Sep. 12, 2026.",
+    "total_price_excl_tax_with_discount": "15.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-03",
+  "reference": "Sales at Shift 141 - Introductieborrel eerstejaars (542cdaa0-9698-4116-a8a1-1f1ddc5114f2) [E1201]",
+  "contact": {
+   "company_name": "Unknown Payer"
+  },
+  "details": [
+   {
+    "project_id": "500533745550361743",
+    "description": "4x Desperados. Ordered at 22:05:41.209385",
+    "total_price_excl_tax_with_discount": "11.57",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-03",
+  "reference": "Food Introductieborrel eerstejaars [9042] [E1201]",
+  "contact": {
+   "company_name": "Jane Smith"
+  },
+  "details": [
+   {
+    "project_id": "500557434166707306",
+    "description": "Food order by Jane Smith for Introductieborrel eerstejaars",
+    "total_price_excl_tax_with_discount": "6.5",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-09",
+  "reference": "Membership renewal member (year) [07fce3da-37fd-47a7-8168-9d4e72c55fe5]",
+  "contact": {
+   "company_name": "Michael Jackson"
+  },
+  "details": [
+   {
+    "project_id": "500533748334331284",
+    "description": "Membership renewal member (year). Creation date: Sept. 29, 2026. Completion date: Oct. 9, 2026\n\nDate: October 09, 2026",
+    "total_price_excl_tax_with_discount": "7.5",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-05",
+  "reference": "Membership registration member (year) [b0cb5c06-82bd-42f2-b602-b49ee7175e28]",
+  "contact": {
+   "company_name": "Sophie de Vries"
+  },
+  "details": [
+   {
+    "project_id": "500533748334331284",
+    "description": "Membership registration member (year). Creation date: Sept. 3, 2026. Completion date: Sept. 5, 2026\n\nDate: September 05, 2026",
+    "total_price_excl_tax_with_discount": "7.5",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-14",
+  "reference": "Membership renewal member (year) [81a4a6ad-3088-430c-93d2-0e4067bfeb07]",
+  "contact": {
+   "company_name": "Daan Bakker"
+  },
+  "details": [
+   {
+    "project_id": "500533748334331284",
+    "description": "Membership renewal member (year). Creation date: Sept. 1, 2026. Completion date: Sept. 14, 2026\n\nDate: September 14, 2026",
+    "total_price_excl_tax_with_discount": "7.5",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-02",
+  "reference": "Membership registration member (study) [581222b2-9a47-4efa-ab22-280fb23a2f87]",
+  "contact": {
+   "company_name": "Lisa Jansen"
+  },
+  "details": [
+   {
+    "project_id": "500533748334331284",
+    "description": "Membership registration member (study). Creation date: Aug. 28, 2026. Completion date: Sept. 2, 2026\n\nDate: September 02, 2026",
+    "total_price_excl_tax_with_discount": "30.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-22",
+  "reference": "Pubquiz [43120] [E1213]",
+  "contact": {
+   "company_name": "Sophie de Vries"
+  },
+  "details": [
+   {
+    "project_id": "500618042348143841",
+    "description": "Event registration Pubquiz. Sep. 29, 2026. Registration date: Sep. 22, 2026.",
+    "total_price_excl_tax_with_discount": "2.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-24",
+  "reference": "Pubquiz [43127] [E1213]",
+  "contact": {
+   "company_name": "Daan Bakker"
+  },
+  "details": [
+   {
+    "project_id": "500618042348143841",
+    "description": "Event registration Pubquiz. Sep. 29, 2026. Registration date: Sep. 24, 2026.",
+    "total_price_excl_tax_with_discount": "2.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-09",
+  "reference": "Wijnproeverij [43530] [E1210]",
+  "contact": {
+   "company_name": "Michael Jackson"
+  },
+  "details": [
+   {
+    "project_id": "500620622387217801",
+    "description": "Event registration Wijnproeverij. Oct. 22, 2026. Registration date: Oct. 9, 2026.",
+    "total_price_excl_tax_with_discount": "12.5",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-10-10",
+  "reference": "Wijnproeverij [43533] [E1210]",
+  "contact": {
+   "company_name": "Lisa Jansen"
+  },
+  "details": [
+   {
+    "project_id": "500620622387217801",
+    "description": "Event registration Wijnproeverij. Oct. 22, 2026. Registration date: Oct. 10, 2026.",
+    "total_price_excl_tax_with_discount": "12.5",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-29",
+  "reference": "Sales at Shift 158 - Pubquiz (21e192bc-6e49-4a91-9ea8-6fec8bca5eb2) [E1213]",
+  "contact": {
+   "company_name": "Unknown Payer"
+  },
+  "details": [
+   {
+    "project_id": "500618042348143841",
+    "description": "2x Hertog Jan. Ordered at 20:41:17.093312",
+    "total_price_excl_tax_with_discount": "4.13",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-29",
+  "reference": "Sales at Shift 158 - Pubquiz (c0df779d-bc1a-42cf-84c8-174d6364eaa2) [E1213]",
+  "contact": {
+   "company_name": "John Doe"
+  },
+  "details": [
+   {
+    "project_id": "500618042348143841",
+    "description": "1x Desperados. Ordered at 21:55:03.640118",
+    "total_price_excl_tax_with_discount": "2.89",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "open",
+  "date": "2026-09-29",
+  "reference": "Food Pubquiz [9135] [E1213]",
+  "contact": {
+   "company_name": "Lisa Jansen"
+  },
+  "details": [
+   {
+    "project_id": "500618042348143841",
+    "description": "Food order by Lisa Jansen for Pubquiz",
+    "total_price_excl_tax_with_discount": "8.4",
+    "period": null
+   }
+  ]
+ }
+]

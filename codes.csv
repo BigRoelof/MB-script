@@ -1,0 +1,60 @@
+# Codes en regelnamen voor de tabellen in het jaarverslag.
+# Een project in Moneybird heet "CODE - omschrijving" (bijv. "C101 - Maandborrel september").
+# Het cijfer na de C bepaalt de tabel (zie [[categories]] in config.toml), de hele code de regel.
+# Regels die met # beginnen worden overgeslagen. Scheidingsteken mag , of ; zijn (Excel).
+code,name
+# Borrels
+C101,Borrel drinks
+C102,Borrel snacks
+C103,Borrel decoration
+C104,Alumni borrels
+C105,Constitution borrel
+C106,Other borrels
+# Events
+C201,Events committee
+C202,Turing committee
+C203,Parents' day
+C204,First year committee
+C205,Symposium
+C206,Batavierenrace
+C207,Thalia weekend
+C208,End of semester party
+C209,Active member activity
+C210,SNiC
+C211,Wine tasting
+C212,Lunch lectures costs
+C213,Study trip
+C214,Introduction week
+C215,Societies
+C216,Other events
+C217,Lustrum
+C218,WISO
+# General
+C301,Merchandise sales
+C302,Subsidies and commissions
+C303,Committee clothing
+C304,Miscellaneous
+C305,Sustainability
+C306,TechniCie
+C307,Committee activity
+C308,Thabloid
+C309,Reservations partner income
+C310,Sponsoring
+C311,Contribution
+C312,Reservations
+C313,Travel costs
+# Board
+C401,Bookkeeping costs
+C402,Board suits
+C403,Office supplies
+C404,Printing costs
+C405,Depreciations
+# Incidental earnings and losses
+C501,Gifts and donations
+C502,Cash differences
+C503,Statiegeld container return
+C504,Stock differences
+C505,Rounding differences
+C506,Interest
+C507,Earnings and losses previous years
+C508,Uncollectible revenue

@@ -1,0 +1,42 @@
+[
+ {
+  "state": "draft",
+  "contact": {
+   "company_name": "Datadijk Analytics B.V."
+  },
+  "details": [
+   {
+    "project_id": "500529609409823981",
+    "total_price_excl_tax_with_discount": "950.0",
+    "is_optional": false,
+    "is_selected": true
+   },
+   {
+    "project_id": "500529609409823981",
+    "total_price_excl_tax_with_discount": "750.0",
+    "is_optional": false,
+    "is_selected": true
+   }
+  ]
+ },
+ {
+  "state": "draft",
+  "contact": {
+   "company_name": "Kernel Consultancy"
+  },
+  "details": [
+   {
+    "project_id": "500530790621251419",
+    "total_price_excl_tax_with_discount": "2000.0",
+    "is_optional": false,
+    "is_selected": true
+   },
+   {
+    "project_id": "500530791303874437",
+    "total_price_excl_tax_with_discount": "750.0",
+    "is_optional": true,
+    "is_selected": true
+   }
+  ]
+ }
+]

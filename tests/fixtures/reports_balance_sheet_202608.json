@@ -1,0 +1,15 @@
+{
+ "debit": {
+  "total": "0.0",
+  "current_assets": [],
+  "non_current_assets": []
+ },
+ "credit": {
+  "total": "0.0",
+  "equity": [],
+  "provisions": [],
+  "non_current_liabilities": [],
+  "current_liabilities": [],
+  "open_years": []
+ }
+}

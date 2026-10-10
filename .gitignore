@@ -1,0 +1,10 @@
+# Gegenereerde tabellen (opnieuw te maken met jaarverslag.py)
+output/
+
+# Python
+__pycache__/
+*.pyc
+
+# Geheimen nooit committen
+.env
+*.token

@@ -1,0 +1,130 @@
+[
+ {
+  "state": "draft",
+  "invoice_date": "2026-10-05",
+  "contact": {
+   "company_name": "Recruit42 B.V."
+  },
+  "details": [
+   {
+    "project_id": "500530790621251419",
+    "total_price_excl_tax_with_discount": "500.0",
+    "description": "Partnerpakket Q4 2026"
+   }
+  ],
+  "reference": "F2627005"
+ },
+ {
+  "state": "draft",
+  "invoice_date": "2026-09-25",
+  "contact": {
+   "company_name": "Datadijk Analytics B.V."
+  },
+  "details": [
+   {
+    "project_id": "500529610110272779",
+    "total_price_excl_tax_with_discount": "1500.0",
+    "description": "Sponsoring studiereis 2027, incl. bedrijfsbezoek en logo op reisshirt"
+   }
+  ],
+  "reference": "F2627004"
+ },
+ {
+  "state": "draft",
+  "invoice_date": "2026-09-18",
+  "contact": {
+   "company_name": "Kernel Consultancy"
+  },
+  "details": [
+   {
+    "project_id": "500530791303874437",
+    "total_price_excl_tax_with_discount": "750.0",
+    "description": "Lunchlezing 'Clean code in de praktijk', incl. promotie onder leden en lunch [E1209]"
+   }
+  ],
+  "reference": "F2627003 E1209"
+ },
+ {
+  "state": "draft",
+  "invoice_date": "2026-09-02",
+  "contact": {
+   "company_name": "Byte & Co Software B.V."
+  },
+  "details": [
+   {
+    "project_id": "500530790621251419",
+    "total_price_excl_tax_with_discount": "2000.0",
+    "description": "Partnerpakket collegejaar 2026-2027 (4 kwartalen): logo op website en nieuwsbrief, vacatures op het vacatureplatform"
+   }
+  ],
+  "reference": "F2627002"
+ },
+ {
+  "state": "draft",
+  "invoice_date": "2026-09-01",
+  "contact": {
+   "company_name": "Byte & Co Software B.V."
+  },
+  "details": [
+   {
+    "project_id": "500529609409823981",
+    "total_price_excl_tax_with_discount": "950.0",
+    "description": "Stand op de bedrijvendag 2026, incl. vermelding in de bedrijvengids [E1205]"
+   },
+   {
+    "project_id": "500529609409823981",
+    "total_price_excl_tax_with_discount": "75.0",
+    "description": "Extra tafel en stroomaansluiting [E1205]"
+   }
+  ],
+  "reference": "F2627001 E1205"
+ },
+ {
+  "state": "draft",
+  "invoice_date": "2026-10-07",
+  "reference": "F2627006 E1212",
+  "contact": {
+   "company_name": "Datadijk Analytics B.V."
+  },
+  "details": [
+   {
+    "project_id": "500530791303874437",
+    "description": "Lunchlezing Datadijk, incl. promotie onder leden en lunch [E1212]",
+    "total_price_excl_tax_with_discount": "750.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "draft",
+  "invoice_date": "2026-10-08",
+  "reference": "F2627007",
+  "contact": {
+   "company_name": "Kernel Consultancy"
+  },
+  "details": [
+   {
+    "project_id": "500530790621251419",
+    "description": "Partnerpakket Q4 2026",
+    "total_price_excl_tax_with_discount": "500.0",
+    "period": null
+   }
+  ]
+ },
+ {
+  "state": "draft",
+  "invoice_date": "2026-10-09",
+  "reference": "F2627008",
+  "contact": {
+   "company_name": "Recruit42 B.V."
+  },
+  "details": [
+   {
+    "project_id": "500557439424267413",
+    "description": "Advertentie Thabloid oktober (halve pagina)",
+    "total_price_excl_tax_with_discount": "150.0",
+    "period": null
+   }
+  ]
+ }
+]

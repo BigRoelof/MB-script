@@ -1,0 +1,42 @@
+[
+ {
+  "reference": "Kasverschil Borrel [E1208]",
+  "date": "2026-10-06",
+  "general_journal_document_entries": [
+   {
+    "ledger_account_id": "500528313173804963",
+    "project_id": "500533749732083189",
+    "debit": "0.0",
+    "credit": "5.0",
+    "description": "Kasverschil Oktober Borrel"
+   },
+   {
+    "ledger_account_id": "500528313170659226",
+    "project_id": null,
+    "debit": "5.0",
+    "credit": "0.0",
+    "description": "Kasverschil Oktober Borrel"
+   }
+  ]
+ },
+ {
+  "reference": "Kasverschil september",
+  "date": "2026-09-30",
+  "general_journal_document_entries": [
+   {
+    "ledger_account_id": "500528313170659228",
+    "project_id": "500533749732083189",
+    "debit": "4.16",
+    "credit": "0.0",
+    "description": "Kasverschil kastelling september"
+   },
+   {
+    "ledger_account_id": "500528313213650855",
+    "project_id": null,
+    "debit": "0.0",
+    "credit": "4.16",
+    "description": "Kasverschil kastelling september"
+   }
+  ]
+ }
+]

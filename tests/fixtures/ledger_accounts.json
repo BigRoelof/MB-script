@@ -1,0 +1,137 @@
+[
+ {
+  "id": "500528313165416342",
+  "name": "Accounts payable",
+  "account_type": "current_liabilities"
+ },
+ {
+  "id": "500528313168562071",
+  "name": "Accounts receivable",
+  "account_type": "current_assets"
+ },
+ {
+  "id": "500528313169610648",
+  "name": "Assistance accounts",
+  "account_type": "current_assets"
+ },
+ {
+  "id": "500528313213650855",
+  "name": "Cash control",
+  "account_type": "current_assets"
+ },
+ {
+  "id": "500528313216796585",
+  "name": "Deferred revenue",
+  "account_type": "current_liabilities"
+ },
+ {
+  "id": "500528313169610649",
+  "name": "Exchange rate differences",
+  "account_type": "other_income_expenses"
+ },
+ {
+  "id": "500528313170659226",
+  "name": "Financial accounts",
+  "account_type": "current_assets"
+ },
+ {
+  "id": "500528313171707810",
+  "name": "Housing costs",
+  "account_type": "expenses"
+ },
+ {
+  "id": "500528313170659227",
+  "name": "Other accounts receivable",
+  "account_type": "current_assets"
+ },
+ {
+  "id": "500528313170659228",
+  "name": "Other costs",
+  "account_type": "expenses"
+ },
+ {
+  "id": "500528313170659229",
+  "name": "Other short term debts",
+  "account_type": "current_liabilities"
+ },
+ {
+  "id": "500528313218893741",
+  "name": "Payable VAT",
+  "account_type": "current_liabilities"
+ },
+ {
+  "id": "500528313217845163",
+  "name": "Payments to be classified",
+  "account_type": "current_liabilities"
+ },
+ {
+  "id": "500528313216796584",
+  "name": "Prepaid expenses",
+  "account_type": "current_assets"
+ },
+ {
+  "id": "500528313218893742",
+  "name": "Receivable VAT",
+  "account_type": "current_liabilities"
+ },
+ {
+  "id": "500528313218893740",
+  "name": "Received payments to be classified",
+  "account_type": "current_assets"
+ },
+ {
+  "id": "500528313173804963",
+  "name": "Revenue",
+  "account_type": "revenue"
+ },
+ {
+  "id": "500528313171707806",
+  "name": "Sales costs",
+  "account_type": "expenses"
+ },
+ {
+  "id": "500528313171707807",
+  "name": "Sales tax",
+  "account_type": "current_liabilities"
+ },
+ {
+  "id": "500528313223088050",
+  "name": "Sales tax paid or received",
+  "account_type": "current_liabilities"
+ },
+ {
+  "id": "500528313220990895",
+  "name": "Settlements",
+  "account_type": "current_assets"
+ },
+ {
+  "id": "500528313217845162",
+  "name": "Transactions to be classified",
+  "account_type": "current_assets"
+ },
+ {
+  "id": "500528313173804964",
+  "name": "Transport",
+  "account_type": "expenses"
+ },
+ {
+  "id": "500528313220990896",
+  "name": "Unbilled costs",
+  "account_type": "current_liabilities"
+ },
+ {
+  "id": "500528313222039473",
+  "name": "Unbilled revenue",
+  "account_type": "current_assets"
+ },
+ {
+  "id": "500528313171707808",
+  "name": "Uncategorized expenses",
+  "account_type": "expenses"
+ },
+ {
+  "id": "500528313171707809",
+  "name": "Uncategorized income",
+  "account_type": "revenue"
+ }
+]
