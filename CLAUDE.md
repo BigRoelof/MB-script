@@ -39,7 +39,7 @@ Debit = kosten, credit = opbrengsten, excl. btw. Result = credit − debit. Merc
   - `[events.organizers]`: optionele nette namen (CAD → BorrelCie, EVC → Events Committee, …).
 - `events.csv` (export uit concrexit): kolommen `id,name,organizer,date` (ook `;`, `E1234` en `11-10-2026` toegestaan). Gezocht via `--events`, anders naast het script, anders (bij `--fixtures`) in de fixturesmap.
 - `codes.csv`: code → regelnaam.
-- `tests/fixtures/`: ingekorte API-antwoorden uit de sandbox + `events.csv`. Bijgewerkt met de hand/scripts na elke wijziging in de sandbox (de MCP-antwoorden zijn groot; fixtures bevatten alleen de velden die het script gebruikt).
+- `tests/fixtures/`: ingekorte API-antwoorden uit de sandbox (de bijbehorende evenementenlijst is `events.csv` naast het script). Bijgewerkt met de hand/scripts na elke wijziging in de sandbox (de MCP-antwoorden zijn groot; fixtures bevatten alleen de velden die het script gebruikt).
 - `output/`: uitvoer. Oude, door het script gemaakte `events_*.tex` worden elke run opgeruimd.
 - `voorbeeld-sandbox.pdf`: verouderd voorbeeld van vóór de evenementtabellen. `pdflatex` is niet geïnstalleerd; de LaTeX is nooit gecompileerd in deze omgeving.
 
@@ -73,7 +73,7 @@ v2, `https://moneybird.com/api/v2/{administration_id}/...json`: `projects` (`sta
 Administratie "Thalia Sandbox", id `500528313044830083`, eigenaar de penningmeester. Fictieve data:
 - Partners Byte & Co, Kernel Consultancy, Datadijk, Recruit42; leden John Doe, Jane Smith, Michael Jackson, Sophie de Vries, Daan Bakker, Lisa Jansen, plus `Unknown Payer`; leveranciers o.a. Café De Compiler, Pizzeria Il Codice, Drukkerij Van Os, DataWolk Hosting, Wijnhandel De Druif.
 - 24 externe facturen (concrexit-pushes, incl. 4 lidmaatschappen); inkomend 2627001 t/m 2627030; verkoopfacturen F2627001 t/m F2627008 (**alle concept**; de gebruiker moet ze zelf versturen, verzendmethode handmatig); memorialen "Kasverschil september" en "Kasverschil Borrel [E1208]".
-- Verzonnen evenementen E1201–E1213 en E1234 (zie `tests/fixtures/events.csv`).
+- Verzonnen evenementen E1201–E1213 en E1234 (zie `events.csv`).
 - Oude, lege projecten per evenement (bijv. "C101 - Maandborrel september", "C216 - Hackathon 2026") kunnen in Moneybird gearchiveerd worden. Projectnamen C102 "Borrelsnacks september" e.d. zijn nog van de oude opzet.
 - Totaal 2026-2027: kosten €6.822,18, opbrengsten €187,52, resultaat −€6.634,66 (som projecten = W&V, geverifieerd).
 
