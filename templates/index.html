@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thalia jaarverslag {{ s.start|datum }} t/m {{ s.end|datum }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+<script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
+</head>
+<body>
+{% macro download(name, label="Download .tex") -%}
+<a class="download" href="{{ url_for('tex_file', name=name, **s.query()) }}" download>
+  <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0L4.5 6.5M8 10l3.5-3.5M3 13h10"/></svg>{{ label }}</a>
+{%- endmacro %}
+{% macro status(state) -%}
+{% if state == "OK" %}<span class="status good"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>In orde</span>
+{% elif state == "LET OP" %}<span class="status warn"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v5.5M8 12v.5"/></svg>Let op</span>
+{% else %}<span class="status crit"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>Afwijking</span>{% endif %}
+{%- endmacro %}
+
+<header class="topbar">
+  <a class="wordmark" href="{{ url_for('index') }}">Thalia<span>Jaarverslag</span></a>
+
+  <form class="period" method="get" action="{{ url_for('index') }}">
+    <label>Van <input type="month" name="van" value="{{ s.start.strftime('%Y-%m') }}" required></label>
+    <label>t/m <input type="month" name="tm" value="{{ s.end.strftime('%Y-%m') }}" required></label>
+    <label>Bron
+      <select name="bron">
+        <option value="live" {{ 'selected' if s.source == 'live' }} {{ '' if has_token else 'disabled' }}>Moneybird{{ '' if has_token else ' (geen token)' }}</option>
+        <option value="testdata" {{ 'selected' if s.source == 'testdata' }}>Testdata</option>
+      </select>
+    </label>
+    {% if s.drafts %}<input type="hidden" name="concepten" value="1">{% endif %}
+    <button type="submit">Toon</button>
+  </form>
+
+  {% if report %}
+  <div class="actions">
+    <form method="post" action="{{ url_for('refresh', **s.query()) }}">
+      <button class="ghost" type="submit" title="Opgehaald om {{ fetched_at.strftime('%H:%M') }}">Opnieuw ophalen</button>
+    </form>
+    <a class="primary" href="{{ url_for('zip_file', **s.query()) }}" download>Download alle tabellen</a>
+  </div>
+  {% endif %}
+</header>
+
+{% if error %}
+<main class="layout single">
+  <section class="problem" role="alert">
+    <h1>Er ging iets mis bij het maken van het verslag</h1>
+    <p>{{ error }}</p>
+    {% if s.source == 'testdata' %}
+    <p class="hint">De testdata in <code>tests/fixtures</code> bevat alleen collegejaar 2026–2027 (september t/m augustus).</p>
+    {% elif not has_token %}
+    <p class="hint">Start het dashboard met <code>MONEYBIRD_TOKEN</code> in de omgeving, of kies Testdata als bron.</p>
+    {% endif %}
+  </section>
+</main>
+{% else %}
+<div class="layout">
+  <nav class="rail" aria-label="Onderdelen">
+    <a href="#resultaat">Resultaat</a>
+    <a href="#categorieen">Categorieën</a>
+    <a href="#evenementen">Evenementen</a>
+    <a href="#balans">Balans</a>
+    <a href="#partners">Partners</a>
+    <a href="#controles">Controles
+      {% if checks_failed or report.warnings %}<span class="count">{{ checks_failed|length + report.warnings|length }}</span>{% endif %}</a>
+    <p class="source">
+      {% if s.source == 'testdata' %}Testdata uit <code>tests/fixtures</code>
+      {% else %}Moneybird, administratie {{ cfg.administration_id }}{% endif %}<br>
+      opgehaald om {{ fetched_at.strftime('%H:%M') }}
+    </p>
+  </nav>
+
+  <main>
+    <section id="resultaat" class="hero">
+      <div class="period-line">
+        <p>{{ s.start|datum_lang }} t/m {{ s.end|datum_lang }}</p>
+        <nav class="presets" aria-label="Snelkeuze periode">
+          {% for p in presets %}<a href="{{ p.url }}" {% if p.active %}aria-current="true"{% endif %}>{{ p.label }}</a>{% endfor %}
+        </nav>
+      </div>
+      <h1 class="equation" aria-label="Opbrengsten {{ grand.credit|eur }} min kosten {{ grand.debit|eur }} is resultaat {{ grand.result|eur }}">
+        <span class="term credit"><span class="amount">{{ grand.credit|eur }}</span><span class="term-label">opbrengsten</span></span>
+        <span class="op" aria-hidden="true">−</span>
+        <span class="term debit"><span class="amount">{{ grand.debit|eur }}</span><span class="term-label">kosten</span></span>
+        <span class="op" aria-hidden="true">=</span>
+        <span class="term result"><span class="amount">{{ grand.result|eur }}</span><span class="term-label">resultaat</span></span>
+      </h1>
+      <p class="verdict">
+        {% if checks_failed %}{{ status("AFWIJKING") }} {{ checks_failed|length }} van {{ report.checks|length }} controles wijken af.
+        {% elif checks_soft %}{{ status("LET OP") }} {{ checks_ok }} van {{ report.checks|length }} controles in orde, {{ checks_soft|length }} om na te kijken.
+        {% else %}{{ status("OK") }} Alle {{ report.checks|length }} controles kloppen.{% endif %}
+        {% if report.warnings %}<a href="#controles">{{ report.warnings|length }} waarschuwing{{ 'en' if report.warnings|length != 1 }} bekijken</a>
+        {% else %}Geen waarschuwingen.{% endif %}
+      </p>
+    </section>
+
+    <section id="categorieen">
+      <div class="section-head">
+        <h2>Per categorie</h2>
+        {{ download("results_overview.tex", "Download overzicht .tex") }}
+      </div>
+      <div class="overview">
+        <figure class="barchart" aria-label="Kosten en opbrengsten per categorie">
+          <figcaption class="legend">
+            <span><i class="swatch credit"></i>Opbrengsten</span>
+            <span><i class="swatch debit"></i>Kosten</span>
+          </figcaption>
+          <div class="plot">
+            <div class="grid" aria-hidden="true">
+              {% for t in chart.axis %}<span style="left: {{ t.pct }}%"></span>{% endfor %}
+            </div>
+            {% for c in chart.rows %}
+            <div class="bar-row" tabindex="0"
+                 data-tip="{{ c.row.label }}&#10;Opbrengsten {{ c.row.actual.credit|eur }}&#10;Kosten {{ c.row.actual.debit|eur }}&#10;Resultaat {{ c.row.actual.result|eur }}">
+              <span class="bar-label">{{ c.row.label }}</span>
+              <span class="bars">
+                <span class="bar credit" style="width: {{ c.credit_pct }}%"></span>
+                <span class="bar debit" style="width: {{ c.debit_pct }}%"></span>
+              </span>
+            </div>
+            {% endfor %}
+            <div class="axis" aria-hidden="true">
+              {% for t in chart.axis %}<span style="left: {{ t.pct }}%">{{ t.value|geheel }}</span>{% endfor %}
+            </div>
+          </div>
+        </figure>
+
+        <table class="money">
+          <thead><tr><th>Categorie</th><th>Kosten</th><th>Opbrengsten</th><th>Resultaat</th></tr></thead>
+          <tbody>
+          {% for r in report.overview_rows %}
+            <tr><td>{{ r.label }}</td><td>{{ r.actual.debit|num }}</td><td>{{ r.actual.credit|num }}</td><td>{{ r.actual.result|num }}</td></tr>
+          {% endfor %}
+          </tbody>
+          <tfoot><tr><td>Totaal</td><td>{{ grand.debit|num }}</td><td>{{ grand.credit|num }}</td><td>{{ grand.result|num }}</td></tr></tfoot>
+        </table>
+      </div>
+
+      <div class="category-tables">
+      {% for cat, rows, sum in categories %}
+        <section class="category" aria-labelledby="cat-{{ cat.file }}">
+          <div class="section-head">
+            <h3 id="cat-{{ cat.file }}">{{ cat.name }}</h3>
+            {{ download("results_" ~ cat.file ~ ".tex") }}
+          </div>
+          <table class="money">
+            <thead><tr><th>Regel</th><th>Kosten</th><th>Opbrengsten</th><th>Resultaat</th></tr></thead>
+            <tbody>
+            {% for r in rows %}
+              <tr><td><span class="code">{{ r.code }}</span> {{ r.label }}</td><td>{{ r.actual.debit|num }}</td><td>{{ r.actual.credit|num }}</td><td>{{ r.actual.result|num }}</td></tr>
+            {% else %}
+              <tr><td class="empty" colspan="4">Geen boekingen in deze periode.</td></tr>
+            {% endfor %}
+            </tbody>
+            <tfoot><tr><td>Totaal</td><td>{{ sum.actual.debit|num }}</td><td>{{ sum.actual.credit|num }}</td><td>{{ sum.actual.result|num }}</td></tr></tfoot>
+          </table>
+        </section>
+      {% endfor %}
+      </div>
+    </section>
+
+    <section id="evenementen">
+      <div class="section-head">
+        <h2>Evenementen per organizer</h2>
+        <a class="download" href="{{ url_for('lines_csv', **s.query()) }}" download>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0L4.5 6.5M8 10l3.5-3.5M3 13h10"/></svg>Download boekregels .csv</a>
+      </div>
+      <p class="lede">Klik op een evenement voor de boekregels erachter. Het staafje toont het resultaat: links verlies, rechts winst, op dezelfde schaal voor alle evenementen.</p>
+      {% for org in organizers %}
+      <section class="organizer" aria-labelledby="org-{{ loop.index }}">
+        <div class="section-head">
+          <h3 id="org-{{ loop.index }}">{{ org.heading }}</h3>
+          <span class="org-total">{{ org.events|length }} evenement{{ 'en' if org.events|length != 1 }}, resultaat {{ org.total.result|eur }}</span>
+          {{ download(org.file) }}
+        </div>
+        <table class="money events">
+          <colgroup><col><col class="c-date"><col class="c-num"><col class="c-num"><col class="c-num"><col class="c-bar"></colgroup>
+          <thead><tr><th>Evenement</th><th>Datum</th><th>Kosten</th><th>Opbrengsten</th><th>Resultaat</th><th><span class="visually-hidden">Resultaat als staaf</span></th></tr></thead>
+          <tbody>
+          {% for e in org.events %}
+            {% set rid = "ev-" ~ e.row.event_id %}
+            <tr class="event-row">
+              <td>
+                {% if e.lines %}
+                <button class="expand" type="button" aria-expanded="false" aria-controls="{{ rid }}">
+                  <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>{{ e.row.name }}</button>
+                {% else %}<span class="no-lines">{{ e.row.name }}</span>{% endif %}
+                <span class="code">E{{ e.row.event_id }}</span>
+              </td>
+              <td class="date">{{ e.row.date|datum }}</td>
+              <td>{{ e.row.amounts.debit|num }}</td><td>{{ e.row.amounts.credit|num }}</td><td>{{ e.row.amounts.result|num }}</td>
+              <td class="rbar-cell" data-tip="{{ e.row.name }}&#10;Resultaat {{ e.row.amounts.result|eur }}">
+                <span class="rbar"><span class="rbar-fill {{ e.bar.side }}" style="width: {{ e.bar.pct }}%"></span></span>
+              </td>
+            </tr>
+            {% if e.lines %}
+            <tr class="lines-row" id="{{ rid }}" hidden>
+              <td colspan="6">
+                <table class="lines">
+                  <thead><tr><th>Datum</th><th>Document</th><th>Omschrijving</th><th>Code</th><th>Kosten</th><th>Opbrengsten</th></tr></thead>
+                  <tbody>
+                  {% for l in e.lines %}
+                    <tr><td class="date">{{ l.date|datum }}</td><td>{{ l.reference }}</td><td>{{ l.description }}</td><td class="code">{{ l.code }}</td>
+                        <td>{{ l.amounts.debit|num }}</td><td>{{ l.amounts.credit|num }}</td></tr>
+                  {% endfor %}
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+            {% endif %}
+          {% else %}
+            <tr><td class="empty" colspan="6">Geen evenementen in deze periode.</td></tr>
+          {% endfor %}
+          </tbody>
+          <tfoot><tr><td>Totaal</td><td></td><td>{{ org.total.debit|num }}</td><td>{{ org.total.credit|num }}</td><td>{{ org.total.result|num }}</td><td></td></tr></tfoot>
+        </table>
+      </section>
+      {% else %}
+      <p class="empty">Geen evenementen in deze periode.</p>
+      {% endfor %}
+    </section>
+
+    <section id="balans">
+      <div class="section-head">
+        <h2>Balans</h2>
+        {{ download("balance_sheet.tex") }}
+      </div>
+      <div class="balance">
+        {% for title, key in [("Activa", "assets"), ("Passiva", "liabilities")] %}
+        <table class="money">
+          <thead><tr><th>{{ title }}</th><th>{{ balance.begin|datum }}</th><th>{{ balance.end|datum }}</th></tr></thead>
+          <tbody>
+          {% for b in balance[key] %}
+            <tr><td>{{ b.name }}</td><td>{{ b.begin|num if b.begin is not none else '–' }}</td><td>{{ b.end|num if b.end is not none else '–' }}</td></tr>
+          {% else %}
+            <tr><td class="empty" colspan="3">Geen posten.</td></tr>
+          {% endfor %}
+          </tbody>
+          <tfoot><tr><td>Totaal</td><td>{{ balance.totals[key][0]|num }}</td><td>{{ balance.totals[key][1]|num }}</td></tr></tfoot>
+        </table>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section id="partners">
+      <div class="section-head">
+        <h2>Partners</h2>
+        {{ download("partners.tex") }}
+      </div>
+      <form class="toggle" method="get" action="{{ url_for('index') }}#partners">
+        {% for k, v in s.query().items() if k != 'concepten' %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+        <label><input type="checkbox" name="concepten" value="1" {{ 'checked' if s.drafts }} onchange="this.form.requestSubmit()">
+          Conceptfacturen en -offertes meetellen</label>
+        <noscript><button type="submit">Toon</button></noscript>
+      </form>
+      <div class="partners">
+        {% for title, items in report.partners.items() %}
+        <table class="money">
+          <thead><tr><th>{{ title }}</th><th>Bedrag</th></tr></thead>
+          <tbody>
+          {% for name, amount in items %}<tr><td>{{ name }}</td><td>{{ amount|num }}</td></tr>
+          {% else %}<tr><td class="empty" colspan="2">Geen.</td></tr>{% endfor %}
+          </tbody>
+          <tfoot><tr><td>Totaal</td><td>{{ partner_totals[title]|num }}</td></tr></tfoot>
+        </table>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section id="controles">
+      <div class="section-head"><h2>Controles en waarschuwingen</h2></div>
+      {% if report.warnings %}
+      <ul class="warnings">
+        {% for w in report.warnings %}<li>{{ status("LET OP") }}<span>{{ w }}</span></li>{% endfor %}
+      </ul>
+      {% else %}
+      <p class="lede">Geen waarschuwingen: elke regel onder een labelcode heeft een evenementlabel en alle labels staan in de evenementenlijst.</p>
+      {% endif %}
+
+      {% if unlabeled %}
+      <details class="unlabeled">
+        <summary>{{ unlabeled|length }} boekregel{{ 's' if unlabeled|length != 1 }} zonder evenementlabel</summary>
+        <table class="money lines">
+          <thead><tr><th>Datum</th><th>Document</th><th>Omschrijving</th><th>Code</th><th>Kosten</th><th>Opbrengsten</th></tr></thead>
+          <tbody>
+          {% for l in unlabeled %}
+            <tr><td class="date">{{ l.date|datum }}</td><td>{{ l.reference }}</td><td>{{ l.description }}</td><td class="code">{{ l.code }}</td>
+                <td>{{ l.amounts.debit|num }}</td><td>{{ l.amounts.credit|num }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </details>
+      {% endif %}
+
+      <details class="checks" {{ 'open' if checks_failed or checks_soft }}>
+        <summary>{{ checks_ok }} van {{ report.checks|length }} controles in orde</summary>
+        <ul>
+          {% for name, state, detail in report.checks %}
+          <li>{{ status(state) }}<span class="check-name">{{ name }}</span><span class="check-detail">{{ detail }}</span></li>
+          {% endfor %}
+        </ul>
+      </details>
+    </section>
+  </main>
+</div>
+{% endif %}
+<div class="tooltip" role="tooltip" hidden></div>
+</body>
+</html>

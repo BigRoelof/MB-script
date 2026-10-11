@@ -11,6 +11,18 @@
 | `partners.tex` | Partnercontracten: Invoice sent / Signed / Created |
 | `example.tex` | Voorbeelddocument dat alles inlaadt (om te controleren) |
 
+## Dashboard
+
+`dashboard.py` toont alles op één pagina in de browser: resultaat, grafiek en tabellen per categorie, evenementen per organizer (met de boekregels erachter), balans, partners, controles en waarschuwingen. Elke tabel heeft een downloadknop voor de `.tex`, en met **Download alle tabellen** krijg je een zip met precies dezelfde bestanden als het script schrijft. Daarnaast kun je de boekregels van de evenementen als CSV voor Excel downloaden.
+
+```sh
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # eenmalig
+cp .env.example .env && chmod 600 .env   # token invullen; alleen nodig voor live gegevens
+.venv/bin/python dashboard.py     # open http://127.0.0.1:5000
+```
+
+Zonder token kies je **Testdata** als bron (`tests/fixtures`, alleen collegejaar 2026-2027). Opgehaalde gegevens blijven in het geheugen tot je op **Opnieuw ophalen** klikt. Wijzigingen in `config.toml`, `codes.csv` en `events.csv` zie je na herladen van de pagina. Het dashboard is alleen bereikbaar vanaf je eigen computer.
+
 ## Hoe de groepering werkt
 
 Elk project in Moneybird heet `CODE - omschrijving`, bijvoorbeeld `C106 - iCIS borrel kwartaal 1`.
@@ -25,17 +37,19 @@ Welke code bij welke regelnaam hoort, staat in **`codes.csv`** (kolommen `code,n
 
 ## Evenementen
 
-Een boekregel hoort bij een evenement via het label `[E<id>]` (event-id uit concrexit), in de omschrijving van de regel of in de naam van het document (zo pusht concrexit, bijv. `Food Maandborrel September [9107] [E1202]`). Naam, datum en organizer komen uit **`events.csv`** (export uit concrexit, kolommen `id,name,organizer,date`), standaard naast het script. Per organizer komt er een tabel met zijn evenementen. In `config.toml` staan onder `[events]` de codes waar elke regel een label hoort te hebben (`label_codes`) en optioneel nettere organizernamen (`[events.organizers]`).
+Een boekregel hoort bij een evenement via het label `[E<id>]` (event-id uit concrexit), in de omschrijving van de regel of in de naam van het document. In de documentnaam mag het tussen haken (zo pusht concrexit, bijv. `Food Maandborrel September [9107] [E1202]`) of los erachter, zoals je het zelf typt: `2627017 E1206` of `F2627001 E1205` (met hoofdletter E). Noemt een documentnaam meer dan één evenement, dan zet je het label per regel in de omschrijving. Naam, datum en organizer komen uit **`events.csv`** (export uit concrexit, kolommen `id,name,organizer,date`), standaard naast het script. Per organizer komt er een tabel met zijn evenementen. In `config.toml` staan onder `[events]` de codes waar elke regel een label hoort te hebben (`label_codes`) en optioneel nettere organizernamen (`[events.organizers]`).
 
 ## Gebruik
 
 Python 3.11 of nieuwer, verder niets te installeren.
 
 1. Maak een persoonlijk API-token aan via de ontwikkelaarsinstellingen van je Moneybird-account. Het script heeft leesrechten nodig op verkoopfacturen, documenten, offertes, bank en instellingen.
-2. Zet het token in een omgevingsvariabele, niet in de code:
+2. Zet het token in het bestand `.env` naast het script (staat in `.gitignore`, komt dus nooit in git):
    ```sh
-   export MONEYBIRD_TOKEN="..."
+   cp .env.example .env && chmod 600 .env
+   # open .env en vul in: MONEYBIRD_TOKEN=...
    ```
+   Een omgevingsvariabele (`export MONEYBIRD_TOKEN=...`) mag ook en gaat voor op `.env`. Na het aanpassen van `.env` het dashboard herstarten.
 3. Draai het script:
    ```sh
    # heel collegejaar (standaard)

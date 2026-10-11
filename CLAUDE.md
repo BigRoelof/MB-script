@@ -18,20 +18,21 @@ Debit = kosten, credit = opbrengsten, excl. btw. Result = credit − debit. Merc
 - **Eén project per code** (bijv. `C101 - Borrel Drink costs`), niet meer één project per evenement. Het evenement staat als label **`[E<id>]`**, met het event-id uit concrexit (de Django-backend van thalia.nu). Elk evenement staat in concrexit (eventueel ongepubliceerd).
 - Thalia werkt niet met uren. Boekjaar = collegejaar, 1 september t/m 31 augustus.
 - **Namen van documenten** (zoals in de echte administratie):
-  - Inkomend (inkoopfacturen, bonnen, declaraties van leden): volgnummer per collegejaar, `2627001` = eerste van 2026-2027, met het event erachter als het om een evenement gaat: `2627017 E1206`. Op de regels staat het label ook: `Drankjes bar [E1208]`.
+  - Inkomend (inkoopfacturen, bonnen, declaraties van leden): volgnummer per collegejaar, `2627001` = eerste van 2026-2027, met het event erachter als het om een evenement gaat: `2627017 E1206`.
   - Verkoopfacturen: `F2627001`, met event `F2627001 E1205` (referentieveld; het echte factuurnummer kent Moneybird toe bij versturen).
   - Memorialen zonder factuur: gewone naam, eventueel met label (`Kasverschil Borrel [E1208]`).
 - **Concrexit-pushes** (externe verkoopfacturen, bron `Concrexit (thalia.nu)`), één push per inschrijving/bestelling. Het label staat in de **referentie**, met een eigen id ervoor zodat de referentie uniek is (Moneybird eist unieke referenties per externe factuur, anders 422):
   - Inschrijving: `Karaoke with EVC [43494] [E1234]`, regel `Event registration Karaoke with EVC. Oct. 15, 2026. Registration date: Oct. 8, 2026.`, 0% btw.
   - Drankjes: `Sales at Shift 150 - Maandborrel September (<order-uuid>) [E1202]`, contact vaak `Unknown Payer`, regel `1x Desperados. Ordered at 16:32:29.523903`, 21% btw incl.
-  - Eten: `Food Maandborrel September [9107] [E1202]`, regel `Food order by Jane Smith for Maandborrel September`, 0% btw.
+  - Eten (project C314): `Food Maandborrel September [9107] [E1202]`, regel `Food order by Jane Smith for Maandborrel September`, 0% btw. 
   - Lidmaatschap (geen event, project C311): `Membership renewal member (year) [<uuid>]` (ook `Membership registration member (year|study)`), regel `Membership renewal member (year). Creation date: … Completion date: …` + `Date: …`, 0% btw.
   - Het eventlabel houdt de `E`; losse getallen/uuid's tussen haken zijn concrexit-id's en worden genegeerd.
 - **Nog te bouwen in concrexit** (door de gebruiker): pushen naar vaste kostenplaatsen met bovenstaand formaat, en een exportknop die `events.csv` levert.
 
 ## Code
 
-- `jaarverslag.py`: alleen standaardbibliotheek, Python 3.11+. Leest `MONEYBIRD_TOKEN` uit de omgeving.
+- `jaarverslag.py`: alleen standaardbibliotheek, Python 3.11+. Leest `MONEYBIRD_TOKEN` uit de omgeving of uit `.env` naast het script (`load_dotenv`, eigen parser; omgeving gaat voor; waarschuwt als `.env` niet `chmod 600` is; `.env.example` is het sjabloon). Opgedeeld in `load_config` → `make_client` → `fetch_data` → `build_report` (geeft een `Report` met gestructureerde data + `files`: bestandsnaam → LaTeX); `main()` schrijft alleen de bestanden en de samenvatting.
+- `dashboard.py` (Flask, in `.venv`, `requirements.txt`): lokale webapp op 127.0.0.1:5000 bovenop `build_report`. Eén pagina (`templates/index.html`, `static/dashboard.css`, `static/dashboard.js`, zelfgehost lettertype Archivo in `static/fonts/`). Periode en bron in de URL (`van=2026-09&tm=2027-08&bron=testdata|live&concepten=1`). Downloads: `/tex/<bestand>`, `/zip` (identiek aan de scriptuitvoer), `/csv/boekregels` (`;` en komma, voor Excel). Moneybird-data wordt per bron/administratie/periode in het geheugen gecachet; "Opnieuw ophalen" leegt die. Ontwerp: Thalia-magenta alleen voor bediening; datakleuren (opbrengsten blauw `#2a78d6`, kosten oranje `#eb6834`, verlies rood) zijn met de dataviz-validator gecontroleerd voor licht en donker.
 - `config.toml`: administratie-id (sandbox actief, echte administratie `382550776332945369` uitgecommentarieerd), `[[categories]]`, `[layout]`, `[partners] codes`, en `[events]`:
   - `label_codes`: codes waar elke regel een label hoort te hebben (BorrelCie C101–C103, C104, C106, C201, C202, C204, C211, C212, C214–C217, C303, C307). Regels zonder label daaronder → waarschuwing; alle regels onder deze codes moeten optellen tot de projectrapporten (controle).
   - `max_days` (60): waarschuwing als boekingsdatum zo ver van de evenementdatum ligt.
@@ -47,7 +48,7 @@ Draaien zonder token: `python3 jaarverslag.py --fixtures tests/fixtures --start 
 ### Evenementenlogica
 
 - Boekregels komen uit `sales_invoices`, `external_sales_invoices`, `documents/purchase_invoices`, `documents/receipts`, `documents/general_journal_documents` (bedrag excl. btw; journaalposten ingedeeld via `account_type` van de grootboekrekening). Concepten / `new` tellen niet mee, net als in de rapporten. Datum = `date` of `invoice_date`.
-- Label: eerst `[E…]` in de regelomschrijving, anders in de documentreferentie (alleen als die precies één evenement noemt).
+- Label: eerst `[E…]` in de regelomschrijving, anders in de documentreferentie: `[E1202]` (concrexit) of los `E1206` (handmatig, `2627017 E1206`; alleen als los woord met hoofdletter E, zodat uuid's niet matchen). De referentie telt alleen als die precies één evenement noemt.
 - Alle gelabelde regels tellen mee, **ongeacht de code** (de introductieborrel krijgt ook C214-kosten; een kasverschil op C502 met label telt mee bij de borrel).
 - Per organizer (volgorde van eerste voorkomen in events.csv) de evenementen op datum. Een evenement staat erin als het in de periode valt (ook zonder boekingen) of als er in de periode op geboekt is. Onbekende id's → tabel "Unknown events" + waarschuwing. Zonder events.csv: één tabel met E-nummers + waarschuwing.
 - Regels met een eigen `period` geven een waarschuwing (de rapporten spreiden die).
@@ -78,7 +79,7 @@ Administratie "Thalia Sandbox", id `500528313044830083`, eigenaar de penningmees
 
 ## Open punten
 
-1. **Beveiliging:** het token stond eerder in de docstring van `jaarverslag.py`; de gebruiker heeft het op 10 okt 2026 vervangen door `"..."` vóór de eerste commit (het zit dus niet in de git-geschiedenis). Het oude token in Moneybird intrekken als dat nog niet gebeurd is. Nooit tokens in bestanden zetten; altijd via `MONEYBIRD_TOKEN` in de omgeving.
+1. **Beveiliging:** het token stond eerder in de docstring van `jaarverslag.py`; de gebruiker heeft het op 10 okt 2026 vervangen door `"..."` vóór de eerste commit (het zit dus niet in de git-geschiedenis). Het oude token in Moneybird intrekken als dat nog niet gebeurd is. Nooit tokens in getrackte bestanden zetten; alleen in `.env` (gitignored) of de omgeving.
 2. Nog nooit een echte run tegen de live API met een token gedaan; alleen fixtures.
 3. Concrexit aanpassen (pushformaat + events.csv-export) — werk van de gebruiker.
 4. Eventueel: balans/partnertabellen weglaten als ze niet meer nodig zijn; begroting inlezen; tabelopmaak afstemmen op de echte LaTeX-template.

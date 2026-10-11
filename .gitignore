@@ -8,3 +8,6 @@ __pycache__/
 # Geheimen nooit committen
 .env
 *.token
+
+# Python-omgeving voor het dashboard
+.venv/

@@ -2,7 +2,7 @@
 """Zet Moneybird-data om naar LaTeX-tabellen voor het (half)jaarverslag van Thalia.
 
 Gebruik:
-    export MONEYBIRD_TOKEN="..."            # persoonlijk API-token uit Moneybird
+    # persoonlijk API-token uit Moneybird in .env (zie .env.example) of in de omgeving
     python3 jaarverslag.py --start 2026-09-01 --end 2027-08-31
 
 Zonder --start/--end wordt het lopende collegejaar (1 september t/m 31 augustus)
@@ -35,6 +35,9 @@ API_BASE = "https://moneybird.com/api/v2"
 CODE_RE = re.compile(r"^\s*(C\d{3})\b", re.IGNORECASE)
 # Evenementlabel in de omschrijving van een boekregel: [E1234], met het event-id uit concrexit
 LABEL_RE = re.compile(r"\[E(\d+)\]", re.IGNORECASE)
+# Kaal label in de documentnaam, zoals de penningmeester het typt: "2627017 E1206", "F2627001 E1205".
+# Alleen als los woord met hoofdletter E, dus niet midden in een concrexit-uuid ("542cdaa0-e123-...").
+BARE_LABEL_RE = re.compile(r"(?<!\S)E(\d+)(?!\S)")
 # Boekingsdatum en evenementdatum mogen standaard zoveel dagen uit elkaar liggen
 DEFAULT_MAX_DAYS = 60
 
@@ -421,7 +424,8 @@ def partner_amount(doc: dict, partner_project_ids: set) -> Decimal:
     return amount
 
 
-def partner_tables(invoices, estimates, projects, cfg, include_drafts: bool):
+def partner_groups(invoices, estimates, projects, cfg, include_drafts: bool) -> dict[str, list]:
+    """Partnerbedragen per groep (Invoice sent / Signed / Created): [(contact, bedrag)]."""
     codes = set(cfg.get("partners", {}).get("codes", []))
     pids = {p["id"] for p in projects
             if (m := CODE_RE.match(p["name"])) and m.group(1).upper() in codes}
@@ -443,10 +447,14 @@ def partner_tables(invoices, estimates, projects, cfg, include_drafts: bool):
         amt = partner_amount(est, pids)
         if amt:
             groups[target].append((contact_name(est), amt))
+    for items in groups.values():
+        items.sort(key=lambda x: x[0].lower())
+    return groups
 
+
+def partner_table(groups: dict[str, list]) -> str:
     parts = ["% Gegenereerd door jaarverslag.py -- niet met de hand aanpassen\n"]
     for i, (title, items) in enumerate(groups.items()):
-        items.sort(key=lambda x: x[0].lower())
         body = "".join(f"{tex(n)} & \\texteuro\\ {fmt(a)} \\\\\n" for n, a in items) \
             or "\\emph{None} & \\\\\n"
         tot = sum((a for _, a in items), ZERO)
@@ -458,8 +466,7 @@ def partner_tables(invoices, estimates, projects, cfg, include_drafts: bool):
             f"\\midrule\n\\textbf{{Total}} & \\textbf{{\\texteuro\\ {fmt(tot)}}} \\\\\n"
             "\\bottomrule\n\\end{tabularx}\n\\end{minipage}"
             + ("\\hfill\n" if i < 2 else "\n"))
-    totals = {k: sum((a for _, a in v), ZERO) for k, v in groups.items()}
-    return "".join(parts), totals
+    return "".join(parts)
 
 
 # --------------------------------------------------------------------------
@@ -480,6 +487,11 @@ class EventLine:
     has_period: bool      # de rapporten spreiden zulke regels over hun periode
 
 
+def reference_labels(reference: str) -> set[str]:
+    """Event-id's in een documentnaam: [E1202] (concrexit) en los E1206 (handmatig)."""
+    return {str(int(x)) for x in LABEL_RE.findall(reference) + BARE_LABEL_RE.findall(reference)}
+
+
 def event_lines(documents: dict, projects, ledger, label_codes: set[str]) -> list[EventLine]:
     """Haalt de boekregels met een evenementlabel uit de documenten, plus de regels
     zonder label onder de codes waar een label verwacht wordt (label_codes).
@@ -494,17 +506,19 @@ def event_lines(documents: dict, projects, ledger, label_codes: set[str]) -> lis
     def add(doc, project_id, description, debit, credit, period=None):
         code = code_of.get(project_id, "")
         m = LABEL_RE.search(description or "")
-        if not m:
-            # Concrexit zet het label in de documentnaam ("Food Maandborrel September [9107] [E1202]");
-            # alleen gebruiken als die naam precies één evenement noemt
-            in_reference = {int(x) for x in LABEL_RE.findall(doc.get("reference") or "")}
+        event_id = str(int(m.group(1))) if m else ""
+        if not event_id:
+            # Anders het label in de documentnaam: concrexit zet het daar tussen haken
+            # ("Food Maandborrel September [9107] [E1202]"), de penningmeester los ("2627017 E1206").
+            # Alleen gebruiken als die naam precies één evenement noemt.
+            in_reference = reference_labels(doc.get("reference") or "")
             if len(in_reference) == 1:
-                m = LABEL_RE.search(doc["reference"])
-        if not m and code not in label_codes:
+                event_id = in_reference.pop()
+        if not event_id and code not in label_codes:
             return
         raw_date = doc.get("date") or doc.get("invoice_date")  # verkoopfacturen hebben invoice_date
         date = dt.date.fromisoformat(raw_date) if raw_date else None
-        lines.append(EventLine(code, str(int(m.group(1))) if m else "", date, description or "",
+        lines.append(EventLine(code, event_id, date, description or "",
                                doc.get("reference") or "", Amounts(debit, credit), bool(period)))
 
     for doc in documents["sales_invoices"]:
@@ -543,13 +557,22 @@ def slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", text.lower()) or "other"
 
 
-def event_table(rows: list[tuple[str, str, Amounts]]) -> str:
-    """rows: (naam, datum, bedragen) per evenement."""
+@dataclass
+class EventRow:
+    event_id: str
+    name: str
+    date: dt.date | None  # None = evenement staat niet in events.csv
+    amounts: Amounts
+
+
+def event_table(rows: list[EventRow]) -> str:
     grand = Amounts()
     body = ""
-    for name, date, a in rows:
+    for r in rows:
+        a = r.amounts
         grand += a
-        body += f"{name} & {date} & {fmt(a.debit)} & {fmt(a.credit)} & {fmt(a.result)} \\\\\n"
+        date = f"{r.date:%d-%m-%Y}" if r.date else ""
+        body += f"{tex(r.name)} & {date} & {fmt(a.debit)} & {fmt(a.credit)} & {fmt(a.result)} \\\\\n"
     if not rows:
         body = "\\multicolumn{5}{l}{\\emph{No events in this period}} \\\\\n"
     return (
@@ -564,9 +587,9 @@ def event_table(rows: list[tuple[str, str, Amounts]]) -> str:
     )
 
 
-def organizer_tables(lines: list[EventLine], events: dict[str, Event], start: dt.date, end: dt.date,
-                     organizer_names: dict[str, str]) -> list[tuple[str, str]]:
-    """Per organizer een tabel met zijn evenementen: (kop, tex).
+def organizer_groups(lines: list[EventLine], events: dict[str, Event], start: dt.date, end: dt.date,
+                     organizer_names: dict[str, str]) -> list[tuple[str, list[EventRow]]]:
+    """Per organizer zijn evenementen: (kop, [EventRow]).
 
     Een evenement komt erin als het in de periode valt of als er in de periode op geboekt is.
     Volgorde van de organizers: zoals ze voor het eerst in de evenementenlijst staan.
@@ -586,14 +609,13 @@ def organizer_tables(lines: list[EventLine], events: dict[str, Event], start: dt
     result = []
     for organizer, ids in by_organizer.items():
         ids.sort(key=lambda i: (events[i].date, int(i)))
-        rows = [(tex(events[i].name), f"{events[i].date:%d-%m-%Y}", per_event.get(i, Amounts())) for i in ids]
-        result.append((organizer_names.get(organizer, organizer), event_table(rows)))
+        rows = [EventRow(i, events[i].name, events[i].date, per_event.get(i, Amounts())) for i in ids]
+        result.append((organizer_names.get(organizer, organizer), rows))
 
     unknown = sorted((i for i in per_event if i not in events), key=int)
     if unknown:
         heading = "Unknown events" if events else "Events"
-        rows = [(f"E{i}", "", per_event[i]) for i in unknown]
-        result.append((heading, event_table(rows)))
+        result.append((heading, [EventRow(i, f"E{i}", None, per_event[i]) for i in unknown]))
     return result
 
 
@@ -758,11 +780,10 @@ def validate_period(start: dt.date, end: dt.date):
         raise SystemExit("De periode moet tussen 1 en 12 maanden lang zijn.")
 
 
-def main(argv=None):
-    args = parse_args(argv)
-    validate_period(args.start, args.end)
-    cfg = tomllib.loads(args.config.read_text(encoding="utf-8"))
-    cfg["rows"] = load_codes(args.codes, [c["digit"] for c in cfg["categories"]])
+def load_config(config_path: Path, codes_path: Path) -> tuple[dict, set[str]]:
+    """Leest config.toml en codes.csv en controleert ze. Geeft (cfg, label_codes)."""
+    cfg = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    cfg["rows"] = load_codes(codes_path, [c["digit"] for c in cfg["categories"]])
     events_cfg = cfg.setdefault("events", {})
     if "groups" in events_cfg:
         raise SystemExit("config.toml: [[events.groups]] bestaat niet meer; gebruik [events] label_codes = [...] "
@@ -774,122 +795,204 @@ def main(argv=None):
                          "(staan niet in codes.csv).")
     NUMBER_FMT["thousands"] = cfg["layout"].get("thousands_separator", ",")
     NUMBER_FMT["decimal"] = cfg["layout"].get("decimal_separator", ".")
+    return cfg, label_codes
 
-    if args.fixtures:
-        client = FixtureClient(args.fixtures)
-    else:
-        token = os.environ.get("MONEYBIRD_TOKEN")
-        if not token:
-            raise SystemExit("Zet eerst de omgevingsvariabele MONEYBIRD_TOKEN.")
-        client = MoneybirdClient(token, cfg["administration_id"])
 
-    period = f"{args.start:%Y%m%d}..{args.end:%Y%m%d}"
-    before_start = args.start - dt.timedelta(days=1)
-    print(f"Periode {args.start:%d-%m-%Y} t/m {args.end:%d-%m-%Y}", file=sys.stderr)
+def load_dotenv(path: Path = Path(__file__).with_name(".env")) -> None:
+    """Zet regels als MONEYBIRD_TOKEN=... uit .env in de omgeving.
 
-    print("Gegevens ophalen uit Moneybird...", file=sys.stderr)
-    projects = paged(client, "projects", {"filter": "state:all"})
-    revenue = paged(client, "reports/revenue_by_project", {"period": period}, "revenue_by_project")
-    expenses = paged(client, "reports/expenses_by_project", {"period": period}, "expenses_by_project")
-    pl = client.get("reports/profit_loss", {"period": period})
-    ledger = client.get("ledger_accounts")
-    bs_start = client.get("reports/balance_sheet", {"period": f"{before_start:%Y%m}"})
-    bs_end = client.get("reports/balance_sheet", {"period": f"{args.end:%Y%m}"})
+    Variabelen die al in de omgeving staan gaan voor. Het bestand staat in .gitignore.
+    """
+    if not path.exists():
+        return
+    if os.name == "posix" and path.stat().st_mode & 0o077:
+        print(f"Let op: {path} is leesbaar voor andere gebruikers; maak het privé met: chmod 600 {path}",
+              file=sys.stderr)
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.removeprefix("export ").split("=", 1)
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        os.environ.setdefault(key.strip(), value)
+
+
+def make_client(cfg: dict, fixtures: Path | None):
+    if fixtures:
+        return FixtureClient(fixtures)
+    token = os.environ.get("MONEYBIRD_TOKEN")
+    if not token:
+        raise SystemExit("Geen Moneybird-token gevonden. Zet MONEYBIRD_TOKEN=... in het bestand .env "
+                         "naast het script, of als omgevingsvariabele.")
+    return MoneybirdClient(token, cfg["administration_id"])
+
+
+def fetch_data(client, start: dt.date, end: dt.date) -> dict:
+    """Haalt alles op wat het verslag nodig heeft (ruwe API-antwoorden)."""
+    period = f"{start:%Y%m%d}..{end:%Y%m%d}"
+    before_start = start - dt.timedelta(days=1)
     doc_filter = {"filter": f"period:{period},state:all"}
     invoices = paged(client, "sales_invoices", doc_filter)
-    estimates = paged(client, "estimates", doc_filter)
-    # Voor de evenementtabellen: de boekregels zelf (de rapporten kennen geen omschrijvingen)
-    event_documents = {
-        "sales_invoices": invoices,
-        "external_sales_invoices": paged(client, "external_sales_invoices", {"filter": f"period:{period}"}),
-        "purchase_invoices": paged(client, "documents/purchase_invoices", {"filter": f"period:{period}"}),
-        "receipts": paged(client, "documents/receipts", {"filter": f"period:{period}"}),
-        "general_journal_documents": paged(client, "documents/general_journal_documents",
-                                           {"filter": f"period:{period}"}),
+    return {
+        "projects": paged(client, "projects", {"filter": "state:all"}),
+        "revenue": paged(client, "reports/revenue_by_project", {"period": period}, "revenue_by_project"),
+        "expenses": paged(client, "reports/expenses_by_project", {"period": period}, "expenses_by_project"),
+        "pl": client.get("reports/profit_loss", {"period": period}),
+        "ledger": client.get("ledger_accounts"),
+        "bs_start": client.get("reports/balance_sheet", {"period": f"{before_start:%Y%m}"}),
+        "bs_end": client.get("reports/balance_sheet", {"period": f"{end:%Y%m}"}),
+        "invoices": invoices,
+        "estimates": paged(client, "estimates", doc_filter),
+        # Voor de evenementtabellen: de boekregels zelf (de rapporten kennen geen omschrijvingen)
+        "documents": {
+            "sales_invoices": invoices,
+            "external_sales_invoices": paged(client, "external_sales_invoices", {"filter": f"period:{period}"}),
+            "purchase_invoices": paged(client, "documents/purchase_invoices", {"filter": f"period:{period}"}),
+            "receipts": paged(client, "documents/receipts", {"filter": f"period:{period}"}),
+            "general_journal_documents": paged(client, "documents/general_journal_documents",
+                                               {"filter": f"period:{period}"}),
+        },
     }
 
-    warnings: list[str] = []
-    budget = load_budget(args.budget)
-    tables = build_results(cfg, projects, revenue, expenses, budget, warnings)
 
-    out = args.out
-    out.mkdir(parents=True, exist_ok=True)
-    category_names = {c["digit"]: c["name"] for c in cfg["categories"]}
+def find_events(events_arg: Path | None, fixtures: Path | None) -> Path:
+    """events.csv: --events, anders naast het script, anders in de fixturesmap."""
+    if events_arg is not None:
+        return events_arg
+    candidates = [Path(__file__).with_name("events.csv")]
+    if fixtures:
+        candidates.append(fixtures / "events.csv")
+    return next((c for c in candidates if c.exists()), candidates[0])
+
+
+@dataclass
+class Report:
+    start: dt.date
+    end: dt.date
+    categories: list[dict]              # [[categories]] uit config.toml
+    tables: dict[str, list[Row]]        # categorie-cijfer -> regels
+    overview_rows: list[Row]            # één regel per categorie
+    balance_start: tuple                # (activa, passiva, totaal activa, totaal passiva)
+    balance_end: tuple
+    lines: list[EventLine]
+    events: dict[str, Event]
+    events_path: Path | None            # None = events.csv niet gevonden
+    organizers: list[tuple[str, list[EventRow]]]
+    partners: dict[str, list]
+    checks: list[tuple[str, str, str]]
+    warnings: list[str]
+    files: dict[str, str]               # bestandsnaam -> LaTeX
+
+    @property
+    def grand(self) -> Row:
+        return total(self.overview_rows)
+
+
+def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, end: dt.date,
+                 events_path: Path, budget: dict[str, Amounts] | None = None,
+                 include_drafts: bool = False) -> Report:
+    """Rekent alles uit en maakt de LaTeX-bestanden (in het geheugen)."""
+    warnings: list[str] = []
+    tables = build_results(cfg, data["projects"], data["revenue"], data["expenses"], budget or {}, warnings)
+    files: dict[str, str] = {}
+
     overview_rows = []
     sections = []
     for c in cfg["categories"]:
         rows = tables[c["digit"]]
-        (out / f"results_{c['file']}.tex").write_text(results_table(rows), encoding="utf-8")
-        t = total(rows, c["name"])
-        overview_rows.append(t)
+        files[f"results_{c['file']}.tex"] = results_table(rows)
+        overview_rows.append(total(rows, c["name"]))
         sections.append(f"\\subsubsection*{{{tex(c['name'])}}}\n{{\\small\\input{{results_{c['file']}}}}}")
-    (out / "results_overview.tex").write_text(results_table(overview_rows), encoding="utf-8")
+    files = {"results_overview.tex": results_table(overview_rows), **files}
 
-    names = {la["id"]: la["name"] for la in ledger}
-    (out / "balance_sheet.tex").write_text(
-        balance_table(bs_start, bs_end, names, args.start, args.end), encoding="utf-8")
+    names = {la["id"]: la["name"] for la in data["ledger"]}
+    files["balance_sheet.tex"] = balance_table(data["bs_start"], data["bs_end"], names, start, end)
 
-    checks = run_checks(tables, overview_rows, revenue, expenses, pl, bs_start, bs_end, names)
+    checks = run_checks(tables, overview_rows, data["revenue"], data["expenses"], data["pl"],
+                        data["bs_start"], data["bs_end"], names)
 
     report_by_code = {r.code: r.actual for rows in tables.values() for r in rows}
-    lines = event_lines(event_documents, projects, ledger, label_codes)
-    events_path = args.events
-    if events_path is None:
-        candidates = [Path(__file__).with_name("events.csv")]
-        if args.fixtures:
-            candidates.append(args.fixtures / "events.csv")
-        events_path = next((c for c in candidates if c.exists()), candidates[0])
+    lines = event_lines(data["documents"], data["projects"], data["ledger"], label_codes)
     events: dict[str, Event] = {}
     if events_path.exists():
         events = load_events(events_path)
-        print(f"Evenementenlijst: {events_path}", file=sys.stderr)
     else:
         warnings.append(f"Evenementenlijst {events_path} niet gevonden: de evenementtabellen tonen alleen "
                         "nummers en de labels worden niet gecontroleerd.")
-    # Evenementtabellen van een vorige run weghalen (organizers kunnen veranderd zijn)
-    for old in out.glob("events_*.tex"):
-        if old.read_text(encoding="utf-8").startswith("% Gegenereerd door jaarverslag.py"):
-            old.unlink()
+    events_cfg = cfg.get("events", {})
+    organizers = organizer_groups(lines, events, start, end, events_cfg.get("organizers", {}))
     event_sections = []
-    for heading, table in organizer_tables(lines, events, args.start, args.end,
-                                           events_cfg.get("organizers", {})):
+    for heading, rows in organizers:
         name = f"events_{slug(heading)}"
-        (out / f"{name}.tex").write_text(table, encoding="utf-8")
+        files[f"{name}.tex"] = event_table(rows)
         event_sections.append(f"\\subsubsection*{{{tex(heading)}}}\n{{\\small\\input{{{name}}}}}")
     checks += event_checks(lines, label_codes, report_by_code)
     warnings += event_warnings(lines, events, events_cfg.get("max_days", DEFAULT_MAX_DAYS))
 
-    partner_tex, partner_totals = partner_tables(invoices, estimates, projects, cfg, args.include_drafts)
-    (out / "partners.tex").write_text(partner_tex, encoding="utf-8")
+    partners = partner_groups(data["invoices"], data["estimates"], data["projects"], cfg, include_drafts)
+    files["partners.tex"] = partner_table(partners)
 
-    (out / "example.tex").write_text(EXAMPLE_DOC % {
-        "period": f"{args.start:%d-%m-%Y} -- {args.end:%d-%m-%Y}",
+    files["example.tex"] = EXAMPLE_DOC % {
+        "period": f"{start:%d-%m-%Y} -- {end:%d-%m-%Y}",
         "sections": "\n".join(sections),
         "event_sections": ("\\subsection*{Events per organizer}\n" + "\n".join(event_sections))
-                          if event_sections else ""},
-        encoding="utf-8")
+                          if event_sections else ""}
+
+    return Report(start, end, cfg["categories"], tables, overview_rows,
+                  balance_lines(data["bs_start"], names), balance_lines(data["bs_end"], names),
+                  lines, events, events_path if events_path.exists() else None, organizers, partners,
+                  checks, warnings, files)
+
+
+def main(argv=None):
+    args = parse_args(argv)
+    load_dotenv()
+    validate_period(args.start, args.end)
+    cfg, label_codes = load_config(args.config, args.codes)
+    client = make_client(cfg, args.fixtures)
+
+    print(f"Periode {args.start:%d-%m-%Y} t/m {args.end:%d-%m-%Y}", file=sys.stderr)
+    print("Gegevens ophalen uit Moneybird...", file=sys.stderr)
+    data = fetch_data(client, args.start, args.end)
+    events_path = find_events(args.events, args.fixtures)
+    report = build_report(cfg, label_codes, data, args.start, args.end, events_path,
+                          load_budget(args.budget), args.include_drafts)
+    if report.events_path:
+        print(f"Evenementenlijst: {report.events_path}", file=sys.stderr)
+
+    out = args.out
+    out.mkdir(parents=True, exist_ok=True)
+    # Evenementtabellen van een vorige run weghalen (organizers kunnen veranderd zijn)
+    for old in out.glob("events_*.tex"):
+        if old.read_text(encoding="utf-8").startswith("% Gegenereerd door jaarverslag.py"):
+            old.unlink()
+    for filename, content in report.files.items():
+        (out / filename).write_text(content, encoding="utf-8")
 
     # Samenvatting naar de terminal
-    grand = total(overview_rows)
+    grand = report.grand
     print("\nResultaat per categorie:", file=sys.stderr)
-    for r in overview_rows:
+    for r in report.overview_rows:
         print(f"  {r.label:<34} kosten {fmt_plain(r.actual.debit):>12}  opbrengsten "
               f"{fmt_plain(r.actual.credit):>12}  resultaat {fmt_plain(r.actual.result):>12}", file=sys.stderr)
     print(f"  {'TOTAL':<34} kosten {fmt_plain(grand.actual.debit):>12}  opbrengsten "
           f"{fmt_plain(grand.actual.credit):>12}  resultaat {fmt_plain(grand.actual.result):>12}", file=sys.stderr)
-    print("Partners: " + ", ".join(f"{k} {fmt_plain(v)}" for k, v in partner_totals.items()), file=sys.stderr)
+    print("Partners: " + ", ".join(f"{k} {fmt_plain(sum((a for _, a in v), ZERO))}"
+                                   for k, v in report.partners.items()), file=sys.stderr)
     print("\nControles:", file=sys.stderr)
-    for name, status, detail in checks:
+    for name, status, detail in report.checks:
         print(f"  [{status:<9}] {name}: {detail}", file=sys.stderr)
-    failed = [c for c in checks if c[1] == "AFWIJKING"]
-    soft = [c for c in checks if c[1] == "LET OP"]
-    ok = sum(1 for c in checks if c[1] == "OK")
-    print(f"  Controles: {ok} van {len(checks)} in orde"
+    failed = [c for c in report.checks if c[1] == "AFWIJKING"]
+    soft = [c for c in report.checks if c[1] == "LET OP"]
+    ok = sum(1 for c in report.checks if c[1] == "OK")
+    print(f"  Controles: {ok} van {len(report.checks)} in orde"
           + (f", {len(failed)} afwijking(en)" if failed else "")
           + (f", {len(soft)} let op" if soft else ""), file=sys.stderr)
-    if warnings:
+    if report.warnings:
         print("\nLet op:", file=sys.stderr)
-        for w in warnings:
+        for w in report.warnings:
             print(f"  - {w}", file=sys.stderr)
     print(f"\nTabellen geschreven naar {out.resolve()}", file=sys.stderr)
     return 1 if failed else 0
