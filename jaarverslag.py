@@ -15,6 +15,7 @@ Alleen de Python-standaardbibliotheek is nodig (Python 3.11 of nieuwer).
 from __future__ import annotations
 
 import argparse
+import io
 import calendar
 import csv
 import datetime as dt
@@ -148,16 +149,121 @@ def dec(value) -> Decimal:
     return Decimal(str(value or "0"))
 
 
-def load_budget(path: Path | None) -> dict[str, Amounts]:
-    """Optioneel CSV-bestand met kolommen code,debit,credit."""
-    if not path:
-        return {}
-    budget = {}
-    with path.open(newline="", encoding="utf-8") as fh:
-        for rec in csv.DictReader(fh):
-            code = rec["code"].strip()
-            budget[code] = Amounts(dec(rec.get("debit")), dec(rec.get("credit")))
+# --------------------------------------------------------------------------
+# Begroting
+# --------------------------------------------------------------------------
+
+BUDGET_DIR = Path(__file__).with_name("begroting")
+BUDGET_FILE_RE = re.compile(r"^(\d{4})-(\d{4})\.csv$")
+BUDGET_META_RE = re.compile(r"^#\s*(status|vastgesteld)\s*:\s*(.*?)\s*$", re.IGNORECASE)
+
+
+@dataclass
+class Budget:
+    """De begroting van één collegejaar: per code kosten (debit), opbrengsten (credit) en toelichting."""
+    year: int | None                    # 2026 = collegejaar 2026-2027; None bij een los bestand
+    amounts: dict[str, Amounts] = field(default_factory=dict)
+    notes: dict[str, str] = field(default_factory=dict)
+    status: str = "concept"             # "concept" of "vastgesteld" (door de ALV; dan vergrendeld)
+    adopted: dt.date | None = None      # datum van vaststelling
+    path: Path | None = None
+
+    @property
+    def locked(self) -> bool:
+        return self.status == "vastgesteld"
+
+    @property
+    def label(self) -> str:
+        return year_label(self.year) if self.year is not None else (self.path.stem if self.path else "")
+
+
+def college_year(day: dt.date) -> int:
+    """Collegejaar waarin een datum valt (1 september t/m 31 augustus), als beginjaar."""
+    return day.year if day.month >= 9 else day.year - 1
+
+
+def year_label(year: int) -> str:
+    return f"{year}-{year + 1}"
+
+
+def budget_path(year: int, directory: Path = BUDGET_DIR) -> Path:
+    return directory / f"{year_label(year)}.csv"
+
+
+def budget_years(directory: Path = BUDGET_DIR) -> list[int]:
+    """Collegejaren waarvoor een begrotingsbestand bestaat."""
+    if not directory.is_dir():
+        return []
+    return sorted(int(m.group(1)) for f in directory.iterdir()
+                  if (m := BUDGET_FILE_RE.match(f.name)) and int(m.group(2)) == int(m.group(1)) + 1)
+
+
+def load_budget(path: Path, year: int | None = None) -> Budget:
+    """Leest een begroting: CSV met kolommen code,debit,credit en optioneel note.
+
+    Bovenin mogen regels "# status: vastgesteld" en "# vastgesteld: 2026-10-20" staan.
+    """
+    budget = Budget(year, path=path)
+    text = path.read_text(encoding="utf-8-sig")
+    lines = []
+    for ln in text.splitlines():
+        if ln.lstrip().startswith("#"):
+            if m := BUDGET_META_RE.match(ln.strip()):
+                key, value = m.group(1).lower(), m.group(2)
+                if key == "status":
+                    budget.status = "vastgesteld" if value.lower() == "vastgesteld" else "concept"
+                elif value:
+                    try:
+                        budget.adopted = dt.date.fromisoformat(value)
+                    except ValueError:
+                        raise SystemExit(f"{path.name}: '{value}' is geen geldige datum (verwacht 2026-10-20).")
+        elif ln.strip():
+            lines.append(ln)
+    delimiter = ";" if lines and lines[0].count(";") > lines[0].count(",") else ","
+    for rec in csv.DictReader(lines, delimiter=delimiter):
+        code = (rec.get("code") or "").strip().upper()
+        if not CODE_RE.fullmatch(code):
+            raise SystemExit(f"{path.name}: '{code}' is geen geldige code (verwacht bijvoorbeeld C101).")
+        if code in budget.amounts:
+            raise SystemExit(f"{path.name}: code {code} staat er twee keer in.")
+        try:
+            amounts = Amounts(*(dec((rec.get(k) or "0").strip().replace(",", ".")) for k in ("debit", "credit")))
+        except ArithmeticError:
+            raise SystemExit(f"{path.name}: code {code} heeft een ongeldig bedrag.")
+        budget.amounts[code] = amounts
+        if note := (rec.get("note") or "").strip():
+            budget.notes[code] = note
     return budget
+
+
+def find_budget(start: dt.date, directory: Path = BUDGET_DIR) -> Budget | None:
+    """De begroting van het collegejaar waarin de periode begint, als die er is."""
+    year = college_year(start)
+    path = budget_path(year, directory)
+    return load_budget(path, year) if path.exists() else None
+
+
+def save_budget(budget: Budget, path: Path) -> None:
+    """Schrijft de begroting (alleen regels met een bedrag of toelichting), via een tijdelijk bestand."""
+    header = [f"# Begroting Thalia {budget.label}. Bewerken via het dashboard (Begroting) of hier met de hand.",
+              "# Bedragen excl. btw: debit = kosten, credit = opbrengsten.",
+              f"# status: {budget.status}"]
+    if budget.adopted:
+        header.append(f"# vastgesteld: {budget.adopted.isoformat()}")
+    out = io.StringIO()
+    out.write("\n".join(header) + "\n")
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow(["code", "debit", "credit", "note"])
+    for code in sorted(set(budget.amounts) | set(budget.notes)):
+        a = budget.amounts.get(code, Amounts())
+        note = budget.notes.get(code, "")
+        if a.is_zero() and not note:
+            continue
+        writer.writerow([code, f"{a.debit:.2f}", f"{a.credit:.2f}", note])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(out.getvalue(), encoding="utf-8")
+    os.replace(tmp, path)
 
 
 def load_codes(path: Path, category_digits: list[str]) -> dict[str, str]:
@@ -184,6 +290,66 @@ def load_codes(path: Path, category_digits: list[str]) -> dict[str, str]:
     if not codes:
         raise SystemExit(f"{path.name} bevat geen codes (verwacht kolommen code,name).")
     return codes
+
+
+def _code_line(code: str, name: str, delimiter: str) -> str:
+    out = io.StringIO()
+    csv.writer(out, delimiter=delimiter, lineterminator="").writerow([code, name])
+    return out.getvalue()
+
+
+def _clean_name(name: str) -> str:
+    name = " ".join((name or "").split())
+    if not name:
+        raise ValueError("Geef de regel een naam.")
+    if len(name) > 80:
+        raise ValueError("De naam is te lang (maximaal 80 tekens).")
+    return name
+
+
+def edit_codes(path: Path, category_digits: list[str], code: str, name: str, *, new: bool) -> None:
+    """Voegt een code toe aan codes.csv of hernoemt er een. Commentaar en volgorde blijven staan.
+
+    Geeft ValueError met een leesbare melding als het niet kan.
+    """
+    code, name = code.strip().upper(), _clean_name(name)
+    if not CODE_RE.fullmatch(code):
+        raise ValueError(f"'{code}' is geen geldige code (verwacht bijvoorbeeld C108).")
+    if category_digit(code) not in category_digits:
+        raise ValueError(f"Code {code} hoort bij geen categorie.")
+    original = path.read_text(encoding="utf-8-sig")
+    existing = load_codes(path, category_digits)
+    if new and code in existing:
+        raise ValueError(f"Code {code} bestaat al ({existing[code]}).")
+    if not new and code not in existing:
+        raise ValueError(f"Code {code} bestaat niet.")
+
+    lines = original.splitlines()
+    data = [i for i, ln in enumerate(lines) if ln.strip() and not ln.lstrip().startswith("#")]
+    delimiter = ";" if lines[data[0]].count(";") > lines[data[0]].count(",") else ","
+
+    def line_code(i):
+        return lines[i].split(delimiter, 1)[0].strip().strip('"').upper()
+
+    if new:
+        # Na de laatste kleinere code van dezelfde categorie, anders vóór de eerste grotere, anders achteraan
+        same = [i for i in data[1:] if category_digit(line_code(i)) == category_digit(code)]
+        before = [i for i in same if line_code(i) < code]
+        after = [i for i in same if line_code(i) > code]
+        at = before[-1] + 1 if before else (after[0] if after else len(lines))
+        lines.insert(at, _code_line(code, name, delimiter))
+    else:
+        i = next(i for i in data[1:] if line_code(i) == code)
+        lines[i] = _code_line(code, name, delimiter)
+
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    try:
+        load_codes(tmp, category_digits)       # nog steeds geldig?
+    except SystemExit as err:
+        tmp.unlink()
+        raise ValueError(str(err.code))
+    os.replace(tmp, path)
 
 
 @dataclass
@@ -261,8 +427,13 @@ def build_results(cfg, projects, revenue, expenses, budget, warnings):
             warnings.append(f"Code {code} ('{example_name[code]}') hoort bij geen categorie in config.toml. "
                             "Niet opgenomen in de tabellen.")
         elif code not in row_labels:
-            warnings.append(f"Code {code} ('{example_name[code]}') staat niet in [rows] van config.toml; "
+            warnings.append(f"Code {code} ('{example_name[code]}') staat niet in codes.csv; "
                             "regel krijgt een tijdelijke naam.")
+    for code in sorted(budget):
+        if category_digit(code) not in digits:
+            warnings.append(f"Begroting: code {code} hoort bij geen categorie. Niet opgenomen in de tabellen.")
+        elif code not in row_labels:
+            warnings.append(f"Begroting: code {code} staat niet in codes.csv; regel krijgt een tijdelijke naam.")
 
     hide_empty = cfg["layout"].get("hide_empty_rows", True)
     show_codes = cfg["layout"].get("show_codes", False)
@@ -273,7 +444,7 @@ def build_results(cfg, projects, revenue, expenses, budget, warnings):
                        | {c for c in budget if category_digit(c) == digit})
         rows = []
         for code in codes:
-            label = row_labels.get(code, f"Code {code} (niet in config)")
+            label = row_labels.get(code, f"Code {code} (niet in codes.csv)")
             if show_codes:
                 label = f"{code} {label}"
             row = Row(code, label, budget.get(code, Amounts()), per_code.get(code, Amounts()))
@@ -319,26 +490,72 @@ def fmt(value: Decimal) -> str:
     return "$-$" + s[1:] if s.startswith("-") else s
 
 
-def results_table(rows: list[Row], total_label="TOTAL") -> str:
+def results_table(rows: list[Row], total_label="TOTAL", with_budget=False) -> str:
+    """Resultatentabel. Met begroting erbij: account, budget, debit, credit, result, difference
+    (budget = begroot resultaat, difference = result - budget)."""
+    if with_budget:
+        spec, ncols = "rrrrr", 6
+        group = (" & & \\multicolumn{3}{c}{\\textsc{result} (\\texteuro)} & \\\\\n"
+                 "\\cmidrule(lr){3-5}\n"
+                 "\\textsc{account} & \\textsc{budget} & \\textsc{debit} & \\textsc{credit} & "
+                 "\\textsc{result} & \\textsc{difference} \\\\\n")
+    else:
+        spec, ncols = "rrr", 4
+        group = (" & \\multicolumn{3}{c}{\\textsc{result} (\\texteuro)} \\\\\n"
+                 "\\cmidrule(lr){2-4}\n"
+                 "\\textsc{account} & \\textsc{debit} & \\textsc{credit} & \\textsc{result} \\\\\n")
     head = (
         "% Gegenereerd door jaarverslag.py -- niet met de hand aanpassen\n"
-        "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}X rrr@{}}\n"
-        "\\toprule\n"
-        " & \\multicolumn{3}{c}{\\textsc{result} (\\texteuro)} \\\\\n"
-        "\\cmidrule(lr){2-4}\n"
-        "\\textsc{account} & \\textsc{debit} & \\textsc{credit} & \\textsc{result} \\\\\n"
-        "\\midrule\n"
+        f"\\begin{{tabularx}}{{\\textwidth}}{{@{{}}>{{\\raggedright\\arraybackslash}}X {spec}@{{}}}}\n"
+        "\\toprule\n" + group + "\\midrule\n"
     )
 
     def line(r: Row, bold=False):
         cells = [tex(r.label), fmt(r.actual.debit), fmt(r.actual.credit), fmt(r.actual.result)]
+        if with_budget:
+            cells = [cells[0], fmt(r.budget.result), *cells[1:], fmt(r.difference)]
         if bold:
             cells = [f"\\textbf{{{c}}}" for c in cells]
         return " & ".join(cells) + " \\\\\n"
 
     body = "".join(line(r) for r in rows)
     if not rows:
-        body = "\\multicolumn{4}{l}{\\emph{No bookings in this period}} \\\\\n"
+        body = f"\\multicolumn{{{ncols}}}{{l}}{{\\emph{{No bookings in this period}}}} \\\\\n"
+    return (head + body + "\\midrule\n" + line(total(rows, total_label), bold=True)
+            + "\\bottomrule\n\\end{tabularx}\n")
+
+
+def budget_table(rows: list[Row], notes: dict[str, str] | None = None, total_label="TOTAL",
+                 skip_empty=True) -> str:
+    """De begroting zelf (voor de ALV): account, debit, credit, result, met toelichting als die er is."""
+    if skip_empty:
+        rows = [r for r in rows if not r.budget.is_zero()]
+    notes = notes or {}
+    with_notes = any(notes.get(r.code) for r in rows)
+    spec = "rrr" + (" >{\\raggedright\\arraybackslash}p{0.3\\textwidth}" if with_notes else "")
+    ncols = 5 if with_notes else 4
+    head = (
+        "% Gegenereerd door jaarverslag.py -- niet met de hand aanpassen\n"
+        f"\\begin{{tabularx}}{{\\textwidth}}{{@{{}}>{{\\raggedright\\arraybackslash}}X {spec}@{{}}}}\n"
+        "\\toprule\n"
+        " & \\multicolumn{3}{c}{\\textsc{budget} (\\texteuro)}" + (" &" if with_notes else "") + " \\\\\n"
+        "\\cmidrule(lr){2-4}\n"
+        "\\textsc{account} & \\textsc{debit} & \\textsc{credit} & \\textsc{result}"
+        + (" & \\textsc{explanation}" if with_notes else "") + " \\\\\n"
+        "\\midrule\n"
+    )
+
+    def line(r: Row, bold=False):
+        cells = [tex(r.label), fmt(r.budget.debit), fmt(r.budget.credit), fmt(r.budget.result)]
+        if bold:
+            cells = [f"\\textbf{{{c}}}" for c in cells]
+        if with_notes:
+            cells.append(tex(notes.get(r.code, "")))
+        return " & ".join(cells) + " \\\\\n"
+
+    body = "".join(line(r) for r in rows)
+    if not rows:
+        body = f"\\multicolumn{{{ncols}}}{{l}}{{\\emph{{Nothing budgeted}}}} \\\\\n"
     return (head + body + "\\midrule\n" + line(total(rows, total_label), bold=True)
             + "\\bottomrule\n\\end{tabularx}\n")
 
@@ -596,6 +813,7 @@ EXAMPLE_DOC = r"""\documentclass[a4paper,11pt]{article}
 {\small\input{results_overview}}
 %(sections)s
 %(event_sections)s
+%(budget_sections)s
 \end{document}
 """
 
@@ -618,7 +836,10 @@ def parse_args(argv=None):
     p.add_argument("--events", type=Path,
                    help="evenementenexport uit concrexit, kolommen id,name,organizer,date "
                         "(standaard events.csv naast het script, of in de --fixtures-map)")
-    p.add_argument("--budget", type=Path, help="optioneel CSV met kolommen code,debit,credit")
+    p.add_argument("--budget", type=Path,
+                   help="begroting, CSV met kolommen code,debit,credit(,note) (standaard "
+                        "begroting/<collegejaar>.csv naast het script, bijv. begroting/2026-2027.csv)")
+    p.add_argument("--no-budget", action="store_true", help="geen begroting gebruiken")
     p.add_argument("--out", type=Path, default=Path("output"))
     p.add_argument("--fixtures", type=Path, help="map met opgeslagen API-antwoorden (testen zonder token)")
     return p.parse_args(argv)
@@ -725,6 +946,7 @@ class Report:
     events: dict[str, Event]
     events_path: Path | None            # None = events.csv niet gevonden
     organizers: list[tuple[str, list[EventRow]]]
+    budget: Budget | None
     checks: list[tuple[str, str, str]]
     warnings: list[str]
     files: dict[str, str]               # bestandsnaam -> LaTeX
@@ -735,20 +957,37 @@ class Report:
 
 
 def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, end: dt.date,
-                 events_path: Path, budget: dict[str, Amounts] | None = None) -> Report:
+                 events_path: Path, budget: Budget | None = None) -> Report:
     """Rekent alles uit en maakt de LaTeX-bestanden (in het geheugen)."""
     warnings: list[str] = []
-    tables = build_results(cfg, data["projects"], data["revenue"], data["expenses"], budget or {}, warnings)
+    if budget is not None:
+        if budget.year is not None and college_year(end) != budget.year:
+            warnings.append(f"De periode loopt over twee collegejaren; vergeleken met de begroting van "
+                            f"{budget.label}.")
+        if not budget.locked:
+            warnings.append(f"De begroting {budget.label} is nog een concept (niet vastgesteld).")
+    tables = build_results(cfg, data["projects"], data["revenue"], data["expenses"],
+                           budget.amounts if budget else {}, warnings)
     files: dict[str, str] = {}
+    with_budget = budget is not None
 
     overview_rows = []
     sections = []
+    budget_sections = []
+    budget_files = {}
     for c in cfg["categories"]:
         rows = tables[c["digit"]]
-        files[f"results_{c['file']}.tex"] = results_table(rows)
+        files[f"results_{c['file']}.tex"] = results_table(rows, with_budget=with_budget)
         overview_rows.append(total(rows, c["name"]))
         sections.append(f"\\subsubsection*{{{tex(c['name'])}}}\n{{\\small\\input{{results_{c['file']}}}}}")
-    files = {"results_overview.tex": results_table(overview_rows), **files}
+        if budget is not None:
+            budget_files[f"budget_{c['file']}.tex"] = budget_table(rows, budget.notes)
+            budget_sections.append(f"\\subsubsection*{{{tex(c['name'])}}}\n{{\\small\\input{{budget_{c['file']}}}}}")
+    files = {"results_overview.tex": results_table(overview_rows, with_budget=with_budget), **files}
+    if budget is not None:
+        overview_budget = [Row(r.code, r.label, budget=r.budget) for r in overview_rows]
+        files["budget_overview.tex"] = budget_table(overview_budget, skip_empty=False)
+        files.update(budget_files)
 
     checks = run_checks(tables, overview_rows, data["revenue"], data["expenses"], data["pl"])
 
@@ -774,10 +1013,12 @@ def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, e
         "period": f"{start:%d-%m-%Y} -- {end:%d-%m-%Y}",
         "sections": "\n".join(sections),
         "event_sections": ("\\subsection*{Events per organizer}\n" + "\n".join(event_sections))
-                          if event_sections else ""}
+                          if event_sections else "",
+        "budget_sections": (f"\\subsection*{{Budget {budget.label}}}\n{{\\small\\input{{budget_overview}}}}\n"
+                            + "\n".join(budget_sections)) if budget is not None else ""}
 
     return Report(start, end, cfg["categories"], tables, overview_rows,
-                  lines, events, events_path if events_path.exists() else None, organizers,
+                  lines, events, events_path if events_path.exists() else None, organizers, budget,
                   checks, warnings, files)
 
 
@@ -792,15 +1033,22 @@ def main(argv=None):
     print("Gegevens ophalen uit Moneybird...", file=sys.stderr)
     data = fetch_data(client, args.start, args.end)
     events_path = find_events(args.events, args.fixtures)
-    report = build_report(cfg, label_codes, data, args.start, args.end, events_path,
-                          load_budget(args.budget))
+    if args.no_budget:
+        budget = None
+    elif args.budget:
+        budget = load_budget(args.budget)
+    else:
+        budget = find_budget(args.start)
+    report = build_report(cfg, label_codes, data, args.start, args.end, events_path, budget)
     if report.events_path:
         print(f"Evenementenlijst: {report.events_path}", file=sys.stderr)
+    if budget:
+        print(f"Begroting: {budget.path} ({budget.status})", file=sys.stderr)
 
     out = args.out
     out.mkdir(parents=True, exist_ok=True)
-    # Evenementtabellen van een vorige run weghalen (organizers kunnen veranderd zijn)
-    for old in out.glob("events_*.tex"):
+    # Evenement- en begrotingstabellen van een vorige run weghalen (organizers of begroting kunnen veranderd zijn)
+    for old in [*out.glob("events_*.tex"), *out.glob("budget_*.tex")]:
         if old.read_text(encoding="utf-8").startswith("% Gegenereerd door jaarverslag.py"):
             old.unlink()
     for filename, content in report.files.items():
@@ -809,11 +1057,10 @@ def main(argv=None):
     # Samenvatting naar de terminal
     grand = report.grand
     print("\nResultaat per categorie:", file=sys.stderr)
-    for r in report.overview_rows:
+    for r in [*report.overview_rows, Row("", "TOTAL", grand.budget, grand.actual)]:
         print(f"  {r.label:<34} kosten {fmt_plain(r.actual.debit):>12}  opbrengsten "
-              f"{fmt_plain(r.actual.credit):>12}  resultaat {fmt_plain(r.actual.result):>12}", file=sys.stderr)
-    print(f"  {'TOTAL':<34} kosten {fmt_plain(grand.actual.debit):>12}  opbrengsten "
-          f"{fmt_plain(grand.actual.credit):>12}  resultaat {fmt_plain(grand.actual.result):>12}", file=sys.stderr)
+              f"{fmt_plain(r.actual.credit):>12}  resultaat {fmt_plain(r.actual.result):>12}"
+              + (f"  begroot {fmt_plain(r.budget.result):>12}" if report.budget else ""), file=sys.stderr)
     print("\nControles:", file=sys.stderr)
     for name, status, detail in report.checks:
         print(f"  [{status:<9}] {name}: {detail}", file=sys.stderr)

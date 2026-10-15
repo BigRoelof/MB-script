@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thalia begroting {{ year }}–{{ year + 1 }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+<script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
+<script src="{{ url_for('static', filename='begroting.js') }}" defer></script>
+</head>
+<body class="budget-page">
+{% set year_query = {"van": year ~ "-09", "tm": (year + 1) ~ "-08", "bron": s.source} %}
+<header class="topbar">
+  <a class="wordmark" href="{{ url_for('index', **s.query()) }}">Thalia<span>Begroting</span></a>
+
+  <nav class="presets years" aria-label="Collegejaar">
+    {% for y in years %}
+    <a href="{{ url_for('budget_page', jaar=y, **s.query()) }}" {% if y == year %}aria-current="true"{% endif %}
+       class="{{ '' if y in existing else 'missing' }}">{{ y }}–{{ y + 1 }}</a>
+    {% endfor %}
+  </nav>
+
+  <div class="actions">
+    <span class="save-state" role="status" aria-live="polite" data-state="idle"></span>
+    <a class="ghost" href="{{ url_for('index', **year_query) }}">Naar het dashboard</a>
+  </div>
+</header>
+
+{% if error %}
+<main class="layout single">
+  <section class="problem" role="alert">
+    <h1>De begroting kan niet worden geladen</h1>
+    <p>{{ error }}</p>
+  </section>
+</main>
+{% elif not budget %}
+<main class="layout single">
+  <section class="hero create">
+    <h1>Begroting {{ year }}–{{ year + 1 }}</h1>
+    <p class="lede">Er is nog geen begroting voor dit collegejaar. Kies waarmee je begint; daarna kun je alles aanpassen.
+      De begroting wordt opgeslagen in <code>begroting/{{ year }}-{{ year + 1 }}.csv</code>.</p>
+    <div class="choices">
+      <button type="button" class="choice" data-create="leeg">
+        <strong>Leeg beginnen</strong>
+        <span>Alle codes uit <code>codes.csv</code>, zonder bedragen.</span>
+      </button>
+      <button type="button" class="choice" data-create="begroting" {{ '' if previous_budget else 'disabled' }}>
+        <strong>Begroting {{ previous }}–{{ previous + 1 }} kopiëren</strong>
+        <span>{% if previous_budget %}Bedragen en toelichtingen van vorig jaar als startpunt.{% else %}Er is geen begroting voor {{ previous }}–{{ previous + 1 }}.{% endif %}</span>
+      </button>
+      <button type="button" class="choice" data-create="realisatie" {{ '' if previous_actual else 'disabled' }}>
+        <strong>Realisatie {{ previous }}–{{ previous + 1 }} als startpunt</strong>
+        <span>{% if previous_actual %}Wat er vorig jaar werkelijk is uitgegeven en ontvangen, afgerond op hele euro's. Bron: {{ 'testdata' if s.source == 'testdata' else 'Moneybird' }}.{% else %}Dat jaar is nog niet begonnen.{% endif %}</span>
+      </button>
+    </div>
+    <p class="create-error" role="alert" hidden></p>
+  </section>
+</main>
+{% else %}
+<div class="layout">
+  <nav class="rail" aria-label="Categorieën">
+    <a href="#totaal">Totaal</a>
+    {% for c in categories %}
+    <a href="#cat-{{ c.cat.file }}">{{ c.cat.name }}<span class="rail-sum" data-sum="{{ c.cat.digit }}" data-field="result"></span></a>
+    {% endfor %}
+    <p class="source">Opgeslagen in<br><code>begroting/{{ year }}-{{ year + 1 }}.csv</code></p>
+    <p class="source tips"><strong>Tips</strong><br>
+      Rekenen mag: <code>4*375</code>.<br>
+      <kbd>Enter</kbd> of <kbd>↓</kbd> gaat naar de volgende regel.</p>
+  </nav>
+
+  <main>
+    <section id="totaal" class="hero">
+      <div class="section-head">
+        <h1 class="page-title">Begroting {{ year }}–{{ year + 1 }}</h1>
+        {% if budget.locked %}
+        <span class="pill locked">Vastgesteld{% if budget.adopted %} {{ budget.adopted|datum }}{% endif %}</span>
+        <button type="button" class="ghost" data-dialog="unlock">Ontgrendelen</button>
+        {% else %}
+        <span class="pill">Concept</span>
+        <button type="button" class="ghost" data-dialog="adopt">Vaststellen…</button>
+        {% endif %}
+        <a class="download" href="{{ url_for('tex_file', name='budget_overview.tex', **year_query) }}" download>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0L4.5 6.5M8 10l3.5-3.5M3 13h10"/></svg>Download .tex</a>
+      </div>
+
+      {% if budget.locked %}
+      <p class="banner">Deze begroting is vastgesteld{% if budget.adopted %} door de ALV van {{ budget.adopted|datum_lang }}{% endif %} en is vergrendeld.
+        Codes hernoemen of toevoegen kan wel. Moet er toch iets veranderen (bijvoorbeeld na een begrotingswijziging op een ALV), ontgrendel hem dan eerst.</p>
+      {% endif %}
+
+      <h2 class="equation" aria-live="polite">
+        <span class="term credit"><span class="amount" data-sum="all" data-field="credit" data-format="eur"></span><span class="term-label">begrote opbrengsten</span></span>
+        <span class="op" aria-hidden="true">−</span>
+        <span class="term debit"><span class="amount" data-sum="all" data-field="debit" data-format="eur"></span><span class="term-label">begrote kosten</span></span>
+        <span class="op" aria-hidden="true">=</span>
+        <span class="term result"><span class="amount" data-sum="all" data-field="result" data-format="eur"></span><span class="term-label">begroot resultaat</span></span>
+      </h2>
+
+      <table class="money budget-overview">
+        <thead><tr><th>Categorie</th><th>Kosten</th><th>Opbrengsten</th><th>Resultaat</th>{% if has_actual %}<th>Realisatie</th>{% endif %}</tr></thead>
+        <tbody>
+        {% for c in categories %}
+          <tr><td><a href="#cat-{{ c.cat.file }}">{{ c.cat.name }}</a></td>
+            <td data-sum="{{ c.cat.digit }}" data-field="debit"></td>
+            <td data-sum="{{ c.cat.digit }}" data-field="credit"></td>
+            <td data-sum="{{ c.cat.digit }}" data-field="result"></td>
+            {% if has_actual %}<td class="actual">{{ c.rows|selectattr('actual')|map(attribute='actual.result')|sum|num }}</td>{% endif %}</tr>
+        {% endfor %}
+        </tbody>
+        <tfoot><tr><td>Totaal</td>
+          <td data-sum="all" data-field="debit"></td><td data-sum="all" data-field="credit"></td><td data-sum="all" data-field="result"></td>
+          {% if has_actual %}<td class="actual">{{ categories|map(attribute='rows')|sum(start=[])|selectattr('actual')|map(attribute='actual.result')|sum|num }}</td>{% endif %}</tr></tfoot>
+      </table>
+      {% if has_actual %}
+      <p class="note">Realisatie: wat er in {{ year }}–{{ year + 1 }} tot nu toe geboekt is ({{ 'testdata' if s.source == 'testdata' else 'Moneybird' }}).</p>
+      {% elif actual_error %}
+      <p class="note">Geen realisatie getoond: {{ actual_error }}</p>
+      {% endif %}
+    </section>
+
+    {% for c in categories %}
+    <section class="budget-category" id="cat-{{ c.cat.file }}" aria-labelledby="h-{{ c.cat.file }}">
+      <div class="section-head">
+        <h2 id="h-{{ c.cat.file }}"><span class="code">{{ c.cat.digit }}</span>{{ c.cat.name }}</h2>
+        <span class="cat-total">resultaat <strong data-sum="{{ c.cat.digit }}" data-field="result" data-format="eur"></strong></span>
+      </div>
+      <table class="money budget-grid">
+        <colgroup><col class="c-name"><col class="c-num"><col class="c-num"><col class="c-num">{% if has_actual %}<col class="c-num">{% endif %}<col class="c-note"></colgroup>
+        <thead><tr><th>Regel</th><th>Kosten</th><th>Opbrengsten</th><th>Resultaat</th>{% if has_actual %}<th>Realisatie</th>{% endif %}<th>Toelichting</th></tr></thead>
+        <tbody>
+        {% for r in c.rows %}
+          <tr data-code="{{ r.code }}" data-digit="{{ c.cat.digit }}">
+            <td class="name">
+              <span class="code">{{ r.code }}</span>
+              <span class="label">{{ r.name or 'Niet in codes.csv' }}</span>
+              {% if r.name %}
+              <button type="button" class="icon rename" aria-label="{{ r.code }} hernoemen" title="Hernoemen">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 3.5l2 2L6 12H4v-2z"/></svg></button>
+              {% endif %}
+            </td>
+            <td><input class="amount" data-field="debit" inputmode="decimal" autocomplete="off" aria-label="{{ r.code }} kosten"
+                       data-cents="{{ (r.budget.debit * 100)|int }}" {{ 'disabled' if budget.locked }}></td>
+            <td><input class="amount" data-field="credit" inputmode="decimal" autocomplete="off" aria-label="{{ r.code }} opbrengsten"
+                       data-cents="{{ (r.budget.credit * 100)|int }}" {{ 'disabled' if budget.locked }}></td>
+            <td class="row-result"></td>
+            {% if has_actual %}
+            <td class="actual" {% if r.actual %}data-tip="{{ r.code }} {{ r.name }}&#10;Kosten {{ r.actual.debit|eur }}&#10;Opbrengsten {{ r.actual.credit|eur }}"{% endif %}>
+              {{ r.actual.result|num if r.actual else '' }}</td>
+            {% endif %}
+            <td><input class="note" maxlength="300" autocomplete="off" aria-label="{{ r.code }} toelichting"
+                       value="{{ r.note }}" placeholder="{{ '' if budget.locked else 'Toelichting' }}" {{ 'disabled' if budget.locked }}></td>
+          </tr>
+        {% endfor %}
+          <tr class="add-row" hidden>
+            <td colspan="{{ 6 if has_actual else 5 }}">
+              <form class="add-code" data-digit="{{ c.cat.digit }}">
+                <label>Code <input name="code" required pattern="[Cc]{{ c.cat.digit }}[0-9]{2}" maxlength="4" size="5"
+                       value="{{ c.next_code or '' }}"></label>
+                <label class="grow">Naam <input name="name" required maxlength="80" placeholder="bijv. Lustrum borrel"></label>
+                <button type="submit" class="primary">Toevoegen</button>
+                <button type="button" class="ghost cancel">Annuleren</button>
+                <span class="form-error" role="alert"></span>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot><tr><td>Totaal {{ c.cat.name }}</td>
+          <td data-sum="{{ c.cat.digit }}" data-field="debit"></td><td data-sum="{{ c.cat.digit }}" data-field="credit"></td><td data-sum="{{ c.cat.digit }}" data-field="result"></td>
+          {% if has_actual %}<td class="actual">{{ c.rows|selectattr('actual')|map(attribute='actual.result')|sum|num }}</td>{% endif %}<td></td></tr></tfoot>
+      </table>
+      <button type="button" class="link-button show-add">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>Code toevoegen aan {{ c.cat.name }}</button>
+    </section>
+    {% endfor %}
+  </main>
+</div>
+
+<dialog id="adopt" aria-labelledby="adopt-title">
+  <form method="dialog" class="dialog-form" data-status="vastgesteld">
+    <h2 id="adopt-title">Begroting vaststellen</h2>
+    <p>Na vaststelling door de ALV wordt de begroting vergrendeld, zodat de vergelijking in het jaarverslag niet meer per ongeluk verandert.</p>
+    <label>Datum van de ALV <input type="date" name="date" value="{{ today.isoformat() }}" required></label>
+    <p class="form-error" role="alert"></p>
+    <div class="dialog-actions">
+      <button type="button" class="ghost" value="cancel">Annuleren</button>
+      <button type="submit" class="primary">Vaststellen</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="unlock" aria-labelledby="unlock-title">
+  <form method="dialog" class="dialog-form" data-status="concept">
+    <h2 id="unlock-title">Begroting ontgrendelen?</h2>
+    <p>De begroting wordt weer een concept en kan worden aangepast. Doe dit alleen als de ALV een wijziging heeft goedgekeurd; stel hem daarna opnieuw vast.</p>
+    <p class="form-error" role="alert"></p>
+    <div class="dialog-actions">
+      <button type="button" class="ghost" value="cancel">Annuleren</button>
+      <button type="submit" class="primary">Ontgrendelen</button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
+
+<script type="application/json" id="budget-state">{{ {
+  "year": year,
+  "version": version or "",
+  "locked": budget.locked if budget else false,
+  "source": s.source,
+  "saveUrl": url_for('budget_save', year=year),
+  "statusUrl": url_for('budget_status', year=year),
+  "createUrl": url_for('budget_create', year=year),
+  "codesUrl": url_for('code_add'),
+}|tojson }}</script>
+<div class="tooltip" role="tooltip" hidden></div>
+</body>
+</html>

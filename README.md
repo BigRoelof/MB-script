@@ -5,13 +5,14 @@
 | Bestand | Inhoud |
 |---|---|
 | `results_overview.tex` | Overzicht: Board, Borrels, Events, General, Incidental |
-| `results_<categorie>.tex` | Eén tabel per categorie, één regel per code |
+| `results_<categorie>.tex` | Eén tabel per categorie, één regel per code (met begroting erbij: kolommen budget en difference) |
+| `budget_overview.tex`, `budget_<categorie>.tex` | De begroting zelf, met toelichting (alleen als er een begroting is) |
 | `events_<organizer>.tex` | Per organizer (commissie/society) zijn evenementen met resultaat |
 | `example.tex` | Voorbeelddocument dat alles inlaadt (om te controleren) |
 
 ## Dashboard
 
-`dashboard.py` toont alles op één pagina in de browser: resultaat, grafiek en tabellen per categorie, evenementen per organizer (met de boekregels erachter), controles en waarschuwingen. Elke tabel heeft een downloadknop voor de `.tex`, en met **Download alle tabellen** krijg je een zip met precies dezelfde bestanden als het script schrijft. Daarnaast kun je de boekregels van de evenementen als CSV voor Excel downloaden.
+`dashboard.py` toont alles op één pagina in de browser: tabellen per categorie (met de schakelaar **Begroting weergeven**: begroot, realisatie, verschil en een voortgangsbalk per regel), evenementen per organizer (met de boekregels erachter), controles en waarschuwingen. De categorietabellen hebben een downloadknop voor de `.tex`, en met **Download alle tabellen** krijg je een zip met precies dezelfde bestanden als het script schrijft (met de begroting uit: zonder begroting).
 
 ```sh
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # eenmalig
@@ -36,6 +37,17 @@ Welke code bij welke regelnaam hoort, staat in **`codes.csv`** (kolommen `code,n
 ## Evenementen
 
 Een boekregel hoort bij een evenement via het label `[E<id>]` (event-id uit concrexit), in de omschrijving van de regel of in de naam van het document. In de documentnaam mag het tussen haken (zo pusht concrexit, bijv. `Food Maandborrel September [9107] [E1202]`) of los erachter, zoals je het zelf typt: `2627017 E1206` of `F2627001 E1205` (met hoofdletter E). Noemt een documentnaam meer dan één evenement, dan zet je het label per regel in de omschrijving. Naam, datum en organizer komen uit **`events.csv`** (export uit concrexit, kolommen `id,name,organizer,date`), standaard naast het script. Per organizer komt er een tabel met zijn evenementen. In `config.toml` staan onder `[events]` de codes waar elke regel een label hoort te hebben (`label_codes`) en optioneel nettere organizernamen (`[events.organizers]`).
+
+## Begroting
+
+Op `/begroting` in het dashboard maak je per collegejaar de begroting, per C-code kosten en opbrengsten (excl. btw) met een toelichting. Alle totalen rekenen mee terwijl je typt en elke wijziging wordt meteen opgeslagen in `begroting/<jaar>.csv` (bijv. `begroting/2026-2027.csv`; zet dat bestand in git). Handig:
+
+- In een bedragcel mag je rekenen (`4*375`, `12*(15+3,50)`); `1.500` en `1.234,56` worden begrepen. <kbd>Enter</kbd> of de pijltjes gaan naar de volgende of vorige regel.
+- Een nieuw jaar begin je leeg, als kopie van de begroting van vorig jaar, of met de realisatie van vorig jaar (afgerond op hele euro's).
+- Codes toevoegen of hernoemen kan vanuit de editor; dat past `codes.csv` aan (commentaar en volgorde blijven staan). Verwijderen doe je met de hand in `codes.csv`.
+- **Vaststellen** (met de datum van de ALV) vergrendelt de begroting; **Ontgrendelen** maakt er weer een concept van. Een conceptbegroting geeft een waarschuwing in het verslag.
+
+Op de startpagina staat de realisatie naast de begroting van het collegejaar waarin de gekozen periode begint. Bij een halfjaar is dat de realisatie tot nu toe tegenover de **hele** jaarbegroting.
 
 ## Gebruik
 
@@ -65,7 +77,8 @@ Opties:
 - `--codes BESTAND`: ander codebestand (standaard `codes.csv`).
 - `--out MAP`: waar de bestanden komen (standaard `output`).
 - `--events BESTAND`: andere evenementenlijst (standaard `events.csv` naast het script, of in de `--fixtures`-map).
-- `--budget begroting.csv`: begroting inlezen, kolommen `code,debit,credit` (komt momenteel niet in de tabellen).
+- `--budget BESTAND`: andere begroting (standaard `begroting/<collegejaar>.csv`, het jaar waarin `--start` valt).
+- `--no-budget`: zonder begroting (tabellen zonder budgetkolommen).
 - `--fixtures tests/fixtures`: draaien op opgeslagen testdata, zonder token.
 
 ## Controles
