@@ -3,6 +3,7 @@ output/
 
 # Python
 __pycache__/
+.pytest_cache/
 *.pyc
 
 # Geheimen nooit committen
