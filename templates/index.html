@@ -30,7 +30,6 @@
         <option value="testdata" {{ 'selected' if s.source == 'testdata' }}>Testdata</option>
       </select>
     </label>
-    {% if s.drafts %}<input type="hidden" name="concepten" value="1">{% endif %}
     <button type="submit">Toon</button>
   </form>
 
@@ -62,8 +61,6 @@
     <a href="#resultaat">Resultaat</a>
     <a href="#categorieen">Categorieën</a>
     <a href="#evenementen">Evenementen</a>
-    <a href="#balans">Balans</a>
-    <a href="#partners">Partners</a>
     <a href="#controles">Controles
       {% if checks_failed or report.warnings %}<span class="count">{{ checks_failed|length + report.warnings|length }}</span>{% endif %}</a>
     <p class="source">
@@ -221,53 +218,6 @@
       {% else %}
       <p class="empty">Geen evenementen in deze periode.</p>
       {% endfor %}
-    </section>
-
-    <section id="balans">
-      <div class="section-head">
-        <h2>Balans</h2>
-        {{ download("balance_sheet.tex") }}
-      </div>
-      <div class="balance">
-        {% for title, key in [("Activa", "assets"), ("Passiva", "liabilities")] %}
-        <table class="money">
-          <thead><tr><th>{{ title }}</th><th>{{ balance.begin|datum }}</th><th>{{ balance.end|datum }}</th></tr></thead>
-          <tbody>
-          {% for b in balance[key] %}
-            <tr><td>{{ b.name }}</td><td>{{ b.begin|num if b.begin is not none else '–' }}</td><td>{{ b.end|num if b.end is not none else '–' }}</td></tr>
-          {% else %}
-            <tr><td class="empty" colspan="3">Geen posten.</td></tr>
-          {% endfor %}
-          </tbody>
-          <tfoot><tr><td>Totaal</td><td>{{ balance.totals[key][0]|num }}</td><td>{{ balance.totals[key][1]|num }}</td></tr></tfoot>
-        </table>
-        {% endfor %}
-      </div>
-    </section>
-
-    <section id="partners">
-      <div class="section-head">
-        <h2>Partners</h2>
-        {{ download("partners.tex") }}
-      </div>
-      <form class="toggle" method="get" action="{{ url_for('index') }}#partners">
-        {% for k, v in s.query().items() if k != 'concepten' %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
-        <label><input type="checkbox" name="concepten" value="1" {{ 'checked' if s.drafts }} onchange="this.form.requestSubmit()">
-          Conceptfacturen en -offertes meetellen</label>
-        <noscript><button type="submit">Toon</button></noscript>
-      </form>
-      <div class="partners">
-        {% for title, items in report.partners.items() %}
-        <table class="money">
-          <thead><tr><th>{{ title }}</th><th>Bedrag</th></tr></thead>
-          <tbody>
-          {% for name, amount in items %}<tr><td>{{ name }}</td><td>{{ amount|num }}</td></tr>
-          {% else %}<tr><td class="empty" colspan="2">Geen.</td></tr>{% endfor %}
-          </tbody>
-          <tfoot><tr><td>Totaal</td><td>{{ partner_totals[title]|num }}</td></tr></tfoot>
-        </table>
-        {% endfor %}
-      </div>
     </section>
 
     <section id="controles">

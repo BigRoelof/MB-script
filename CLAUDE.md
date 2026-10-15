@@ -8,7 +8,7 @@ Thalia boekhoudt in Moneybird. `jaarverslag.py` genereert de financiële tabelle
 
 1. **Zes basistabellen**: overzicht (`results_overview.tex`) + per categorie Borrels, Events, General, Board, Incidental (`results_<file>.tex`). Kolommen alleen **debit, credit, result** (budget- en Difference-kolommen zijn op verzoek weggehaald; `--budget` wordt nog ingelezen maar komt niet in de uitvoer).
 2. **Per organizer een tabel met zijn evenementen** (`events_<organizer>.tex`), kolommen event, date, debit, credit, result.
-3. Daarnaast (nog) `balance_sheet.tex`, `partners.tex` (Invoice sent / Signed / Created) en `example.tex` dat alles inlaadt.
+3. Daarnaast `example.tex` dat alles inlaadt. (Balans en partnertabellen zijn op 15 okt 2026 op verzoek weggehaald.)
 
 Debit = kosten, credit = opbrengsten, excl. btw. Result = credit − debit. Merchandisevoorraad en partnerschattingen (B.2) blijven handwerk.
 
@@ -32,8 +32,8 @@ Debit = kosten, credit = opbrengsten, excl. btw. Result = credit − debit. Merc
 ## Code
 
 - `jaarverslag.py`: alleen standaardbibliotheek, Python 3.11+. Leest `MONEYBIRD_TOKEN` uit de omgeving of uit `.env` naast het script (`load_dotenv`, eigen parser; omgeving gaat voor; waarschuwt als `.env` niet `chmod 600` is; `.env.example` is het sjabloon). Opgedeeld in `load_config` → `make_client` → `fetch_data` → `build_report` (geeft een `Report` met gestructureerde data + `files`: bestandsnaam → LaTeX); `main()` schrijft alleen de bestanden en de samenvatting.
-- `dashboard.py` (Flask, in `.venv`, `requirements.txt`): lokale webapp op 127.0.0.1:5000 bovenop `build_report`. Eén pagina (`templates/index.html`, `static/dashboard.css`, `static/dashboard.js`, zelfgehost lettertype Archivo in `static/fonts/`). Periode en bron in de URL (`van=2026-09&tm=2027-08&bron=testdata|live&concepten=1`). Downloads: `/tex/<bestand>`, `/zip` (identiek aan de scriptuitvoer), `/csv/boekregels` (`;` en komma, voor Excel). Moneybird-data wordt per bron/administratie/periode in het geheugen gecachet; "Opnieuw ophalen" leegt die. Ontwerp: Thalia-magenta alleen voor bediening; datakleuren (opbrengsten blauw `#2a78d6`, kosten oranje `#eb6834`, verlies rood) zijn met de dataviz-validator gecontroleerd voor licht en donker.
-- `config.toml`: administratie-id (sandbox actief, echte administratie `382550776332945369` uitgecommentarieerd), `[[categories]]`, `[layout]`, `[partners] codes`, en `[events]`:
+- `dashboard.py` (Flask, in `.venv`, `requirements.txt`): lokale webapp op 127.0.0.1:5000 bovenop `build_report`. Eén pagina (`templates/index.html`, `static/dashboard.css`, `static/dashboard.js`, zelfgehost lettertype Archivo in `static/fonts/`). Periode en bron in de URL (`van=2026-09&tm=2027-08&bron=testdata|live`). Downloads: `/tex/<bestand>`, `/zip` (identiek aan de scriptuitvoer), `/csv/boekregels` (`;` en komma, voor Excel). Moneybird-data wordt per bron/administratie/periode in het geheugen gecachet; "Opnieuw ophalen" leegt die. Ontwerp: Thalia-magenta alleen voor bediening; datakleuren (opbrengsten blauw `#2a78d6`, kosten oranje `#eb6834`, verlies rood) zijn met de dataviz-validator gecontroleerd voor licht en donker.
+- `config.toml`: administratie-id (sandbox actief, echte administratie `382550776332945369` uitgecommentarieerd), `[[categories]]`, `[layout]` en `[events]`:
   - `label_codes`: codes waar elke regel een label hoort te hebben (BorrelCie C101–C103, C104, C106, C201, C202, C204, C211, C212, C214–C217, C303, C307). Regels zonder label daaronder → waarschuwing; alle regels onder deze codes moeten optellen tot de projectrapporten (controle).
   - `max_days` (60): waarschuwing als boekingsdatum zo ver van de evenementdatum ligt.
   - `[events.organizers]`: optionele nette namen (CAD → BorrelCie, EVC → Events Committee, …).
@@ -41,9 +41,9 @@ Debit = kosten, credit = opbrengsten, excl. btw. Result = credit − debit. Merc
 - `codes.csv`: code → regelnaam.
 - `tests/fixtures/`: ingekorte API-antwoorden uit de sandbox (de bijbehorende evenementenlijst is `events.csv` naast het script). Bijgewerkt met de hand/scripts na elke wijziging in de sandbox (de MCP-antwoorden zijn groot; fixtures bevatten alleen de velden die het script gebruikt).
 - `output/`: uitvoer. Oude, door het script gemaakte `events_*.tex` worden elke run opgeruimd.
-- `voorbeeld-sandbox.pdf`: verouderd voorbeeld van vóór de evenementtabellen. `pdflatex` is niet geïnstalleerd; de LaTeX is nooit gecompileerd in deze omgeving.
+- `pdflatex` is niet geïnstalleerd; de LaTeX is nooit gecompileerd in deze omgeving.
 
-Draaien zonder token: `python3 jaarverslag.py --fixtures tests/fixtures --start 2026-09-01 --end 2027-08-31 --include-drafts` → 17 van 17 controles in orde, geen waarschuwingen (stand 10 okt 2026).
+Draaien zonder token: `python3 jaarverslag.py --fixtures tests/fixtures --start 2026-09-01 --end 2027-08-31` → 10 van 10 controles in orde, geen waarschuwingen (stand 15 okt 2026).
 
 ### Evenementenlogica
 
@@ -55,17 +55,16 @@ Draaien zonder token: `python3 jaarverslag.py --fixtures tests/fixtures --start 
 
 ### Controles
 
-Projectrapporten = W&V; overzicht = W&V; categorieën = overzicht; balans activa = passiva en regels = totaal; toename onafgesloten resultaat = resultaat (LET OP); boekregels labelcodes = projectrapporten (kosten en opbrengsten). Bij AFWIJKING exitcode 1.
+Projectrapporten = W&V; overzicht = W&V; categorieën = overzicht; boekregels labelcodes = projectrapporten (kosten en opbrengsten). Bij AFWIJKING exitcode 1.
 
 ### Moneybird API
 
-v2, `https://moneybird.com/api/v2/{administration_id}/...json`: `projects` (`state:all`), `reports/revenue_by_project`, `reports/expenses_by_project`, `reports/profit_loss`, `reports/balance_sheet`, `ledger_accounts`, `sales_invoices`, `estimates`, plus de vijf documentlijsten hierboven.
+v2, `https://moneybird.com/api/v2/{administration_id}/...json`: `projects` (`state:all`), `reports/revenue_by_project`, `reports/expenses_by_project`, `reports/profit_loss`, `ledger_accounts`, plus de vijf documentlijsten hierboven.
 
 ## Bekende beperkingen
 
-- Rapporten: alleen **hele maanden**, maximaal 12. Balans "begin" = eind van de maand vóór de startdatum.
-- **Conceptfacturen** tellen niet mee in rapporten en evenementtabellen; `--include-drafts` werkt alleen voor de partnertabellen.
-- Partnertabellen: op factuur-/offertedatum binnen de periode en projectcodes uit `[partners].codes`. Offerte `accepted` → Signed; `open`/`late` → Created.
+- Rapporten: alleen **hele maanden**, maximaal 12.
+- **Conceptfacturen** tellen niet mee in rapporten en evenementtabellen.
 - Via de Moneybird-connector (MCP) kan Claude geen externe facturen of projecten verwijderen/archiveren, en geen journaalregels aanpassen (regel-id's zijn te groot voor het integer-veld). Dat moet de gebruiker in Moneybird doen.
 
 ## Sandbox in Moneybird (stand 10 okt 2026)
@@ -82,4 +81,4 @@ Administratie "Thalia Sandbox", id `500528313044830083`, eigenaar de penningmees
 1. **Beveiliging:** het token stond eerder in de docstring van `jaarverslag.py`; de gebruiker heeft het op 10 okt 2026 vervangen door `"..."` vóór de eerste commit (het zit dus niet in de git-geschiedenis). Het oude token in Moneybird intrekken als dat nog niet gebeurd is. Nooit tokens in getrackte bestanden zetten; alleen in `.env` (gitignored) of de omgeving.
 2. Nog nooit een echte run tegen de live API met een token gedaan; alleen fixtures.
 3. Concrexit aanpassen (pushformaat + events.csv-export) — werk van de gebruiker.
-4. Eventueel: balans/partnertabellen weglaten als ze niet meer nodig zijn; begroting inlezen; tabelopmaak afstemmen op de echte LaTeX-template.
+4. Begroting inlezen (volgende stap); tabelopmaak afstemmen op de echte LaTeX-template.

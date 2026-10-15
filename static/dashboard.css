@@ -320,16 +320,6 @@ td.date { color: var(--ink-2); }
 .rbar-fill.neg { right: 50%; background: var(--loss); border-radius: 4px 0 0 4px; }
 .rbar-fill.pos { left: 50%; background: var(--credit); border-radius: 0 4px 4px 0; }
 
-/* ---------- Balans en partners ---------- */
-
-.toggle { margin: -0.25rem 0 1.25rem; }
-.toggle label { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--ink-2); cursor: pointer; }
-
-.balance, .partners { align-items: start; }
-.balance { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 2.5rem 3rem; }
-.partners { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 2rem 3rem; margin-bottom: 1rem; }
-.partners th:first-child { color: var(--ink); font-weight: 650; font-size: 0.875rem; }
-
 /* ---------- Controles ---------- */
 
 .warnings { list-style: none; padding: 0; margin: 0 0 1.5rem; max-width: 52rem; }

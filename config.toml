@@ -43,11 +43,6 @@ digit = "5"
 name = "Incidental earnings and losses"
 file = "incidental"
 
-[partners]
-# Factuur- en offerteregels met deze projectcodes tellen mee in de
-# partnertabellen (Invoice sent / Signed / Created).
-codes = ["C310"]
-
 [events]
 # Evenementen staan als label [E<id>] in de omschrijving van een boekregel, of in de
 # documentnaam: [E<id>] (zoals concrexit pusht) of los, bijv. "2627017 E1206", met het

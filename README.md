@@ -7,13 +7,11 @@
 | `results_overview.tex` | Overzicht: Board, Borrels, Events, General, Incidental |
 | `results_<categorie>.tex` | Eén tabel per categorie, één regel per code |
 | `events_<organizer>.tex` | Per organizer (commissie/society) zijn evenementen met resultaat |
-| `balance_sheet.tex` | Balans op begin- en einddatum |
-| `partners.tex` | Partnercontracten: Invoice sent / Signed / Created |
 | `example.tex` | Voorbeelddocument dat alles inlaadt (om te controleren) |
 
 ## Dashboard
 
-`dashboard.py` toont alles op één pagina in de browser: resultaat, grafiek en tabellen per categorie, evenementen per organizer (met de boekregels erachter), balans, partners, controles en waarschuwingen. Elke tabel heeft een downloadknop voor de `.tex`, en met **Download alle tabellen** krijg je een zip met precies dezelfde bestanden als het script schrijft. Daarnaast kun je de boekregels van de evenementen als CSV voor Excel downloaden.
+`dashboard.py` toont alles op één pagina in de browser: resultaat, grafiek en tabellen per categorie, evenementen per organizer (met de boekregels erachter), controles en waarschuwingen. Elke tabel heeft een downloadknop voor de `.tex`, en met **Download alle tabellen** krijg je een zip met precies dezelfde bestanden als het script schrijft. Daarnaast kun je de boekregels van de evenementen als CSV voor Excel downloaden.
 
 ```sh
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # eenmalig
@@ -43,7 +41,7 @@ Een boekregel hoort bij een evenement via het label `[E<id>]` (event-id uit conc
 
 Python 3.11 of nieuwer, verder niets te installeren.
 
-1. Maak een persoonlijk API-token aan via de ontwikkelaarsinstellingen van je Moneybird-account. Het script heeft leesrechten nodig op verkoopfacturen, documenten, offertes, bank en instellingen.
+1. Maak een persoonlijk API-token aan via de ontwikkelaarsinstellingen van je Moneybird-account. Het script heeft leesrechten nodig op verkoopfacturen, documenten en instellingen.
 2. Zet het token in het bestand `.env` naast het script (staat in `.gitignore`, komt dus nooit in git):
    ```sh
    cp .env.example .env && chmod 600 .env
@@ -68,7 +66,6 @@ Opties:
 - `--out MAP`: waar de bestanden komen (standaard `output`).
 - `--events BESTAND`: andere evenementenlijst (standaard `events.csv` naast het script, of in de `--fixtures`-map).
 - `--budget begroting.csv`: begroting inlezen, kolommen `code,debit,credit` (komt momenteel niet in de tabellen).
-- `--include-drafts`: conceptfacturen en -offertes meetellen in de partnertabellen.
 - `--fixtures tests/fixtures`: draaien op opgeslagen testdata, zonder token.
 
 ## Controles
@@ -78,8 +75,6 @@ Na afloop print het script de totalen per categorie en een lijst **Controles** m
 - projectrapporten tegenover de winst-en-verliesrekening (opbrengsten en kosten);
 - het totaal van de overzichtstabel tegenover de winst-en-verliesrekening (opbrengsten, kosten, resultaat);
 - alle regels van de categorietabellen opgeteld tegenover het overzicht;
-- balans: activa = passiva, en de regels tellen op tot het totaal (begin en eind);
-- toename van het onafgesloten resultaat op de balans tegenover het resultaat in de tabel (alleen `LET OP`, omdat een afgesloten boekjaar dit verschil kan geven);
 - alle boekregels onder de labelcodes tegenover de projectrapporten.
 
 Bij een `AFWIJKING` eindigt het script met exitcode 1 (de tabellen worden wel geschreven). Daarnaast waarschuwt het bij:
@@ -93,5 +88,4 @@ Bij een `AFWIJKING` eindigt het script met exitcode 1 (de tabellen worden wel ge
 
 - Moneybird-rapporten werken met **hele maanden**, maximaal 12. Een peildatum als 28 januari kan niet; gebruik 31 januari.
 - De resultaten komen uit de Moneybird-rapporten. **Conceptfacturen tellen daar niet mee.** Pas na versturen staan ze erin.
-- De balans op de begindatum is de stand aan het eind van de maand ervoor (bij 1 september dus 31 augustus).
 - Merchandisevoorraad en de schattingen bij partners (B.2) komen niet uit Moneybird en blijven handwerk.

@@ -57,12 +57,9 @@ class Settings:
     start: dt.date
     end: dt.date
     source: str      # "live" of "testdata"
-    drafts: bool     # conceptfacturen en -offertes meetellen bij partners
 
     def query(self, **override) -> dict:
         q = {"van": f"{self.start:%Y-%m}", "tm": f"{self.end:%Y-%m}", "bron": self.source}
-        if self.drafts:
-            q["concepten"] = "1"
         q.update(override)
         return q
 
@@ -89,7 +86,7 @@ def read_settings() -> Settings:
     source = request.args.get("bron")
     if source not in ("live", "testdata"):
         source = "live" if has_token() else "testdata"
-    return Settings(start, end, source, request.args.get("concepten") == "1")
+    return Settings(start, end, source)
 
 
 # --------------------------------------------------------------------------
@@ -111,7 +108,7 @@ def load(s: Settings):
         _cache[key] = (dt.datetime.now(), jv.fetch_data(client, s.start, s.end))
     fetched_at, data = _cache[key]
     report = jv.build_report(cfg, label_codes, data, s.start, s.end,
-                             jv.find_events(None, fixtures), include_drafts=s.drafts)
+                             jv.find_events(None, fixtures))
     return cfg, report, fetched_at
 
 
@@ -209,18 +206,6 @@ def organizer_view(report: jv.Report) -> list[dict]:
     return out
 
 
-def balance_view(report: jv.Report) -> dict:
-    a0, l0, ta0, tl0 = report.balance_start
-    a1, l1, ta1, tl1 = report.balance_end
-
-    def side(begin, end):
-        return [{"name": k, "begin": begin.get(k), "end": end.get(k)} for k in dict.fromkeys([*begin, *end])]
-
-    return {"begin": report.start - dt.timedelta(days=1), "end": report.end,
-            "assets": side(a0, a1), "liabilities": side(l0, l1),
-            "totals": {"assets": (ta0, ta1), "liabilities": (tl0, tl1)}}
-
-
 def presets(s: Settings) -> list[dict]:
     year = college_year(s.start)
     options = [
@@ -253,8 +238,6 @@ def index():
                         for c, o in zip(report.categories, report.overview_rows)],
             organizers=organizer_view(report),
             unlabeled=[l for l in report.lines if not l.event_id],
-            balance=balance_view(report),
-            partner_totals={k: sum((a for _, a in v), Decimal(0)) for k, v in report.partners.items()},
             checks_ok=checks_ok,
             checks_failed=[c for c in report.checks if c[1] == "AFWIJKING"],
             checks_soft=[c for c in report.checks if c[1] == "LET OP"],

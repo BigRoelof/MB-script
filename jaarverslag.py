@@ -92,8 +92,6 @@ class FixtureClient:
         if int(params.get("page", 1)) > 1:
             return []
         key = path.replace("/", "_")
-        if path == "reports/balance_sheet":
-            key += f"_{params['period']}"
         file = self.directory / f"{key}.json"
         if not file.exists():
             raise SystemExit(f"Fixture ontbreekt: {file}")
@@ -345,130 +343,6 @@ def results_table(rows: list[Row], total_label="TOTAL") -> str:
             + "\\bottomrule\n\\end{tabularx}\n")
 
 
-def flatten_balance(section: list, names: dict) -> list[tuple[str, Decimal]]:
-    out = []
-    for item in section:
-        value = dec(item.get("value"))
-        if value != 0:
-            out.append((item["ledger_account_id"], value))
-        for child in item.get("children", []) or []:
-            cv = dec(child.get("value"))
-            if cv != 0:
-                out.append((child["ledger_account_id"], cv))
-    return out
-
-
-def balance_lines(report: dict, names: dict) -> tuple[dict, dict, Decimal, Decimal]:
-    assets, liabilities = {}, {}
-    debit, credit = report.get("debit", {}), report.get("credit", {})
-    for key in ("non_current_assets", "current_assets"):
-        for lid, v in flatten_balance(debit.get(key, []), names):
-            assets[names.get(lid, lid)] = assets.get(names.get(lid, lid), ZERO) + v
-    for key in ("equity", "provisions", "non_current_liabilities", "current_liabilities"):
-        for lid, v in flatten_balance(credit.get(key, []), names):
-            liabilities[names.get(lid, lid)] = liabilities.get(names.get(lid, lid), ZERO) + v
-    for year in credit.get("open_years", []) or []:
-        liabilities[f"Result {year['year']} (not yet closed)"] = dec(year["value"])
-    return assets, liabilities, dec(debit.get("total")), dec(credit.get("total"))
-
-
-def balance_table(start_report, end_report, names, start: dt.date, end: dt.date) -> str:
-    a0, l0, ta0, tl0 = balance_lines(start_report, names)
-    a1, l1, ta1, tl1 = balance_lines(end_report, names)
-    asset_names = list(dict.fromkeys([*a0, *a1]))
-    liab_names = list(dict.fromkeys([*l0, *l1]))
-    d0, d1 = start.strftime("%d-%m-%Y"), end.strftime("%d-%m-%Y")
-
-    def cell(d, k):
-        return fmt(d[k]) if k in d else "--"
-
-    lines = []
-    for i in range(max(len(asset_names), len(liab_names), 1)):
-        left = ["", "", ""]
-        right = ["", "", ""]
-        if i < len(asset_names):
-            k = asset_names[i]
-            left = [tex(k), cell(a0, k), cell(a1, k)]
-        if i < len(liab_names):
-            k = liab_names[i]
-            right = [tex(k), cell(l0, k), cell(l1, k)]
-        lines.append(" & ".join(left + right) + " \\\\\n")
-
-    return (
-        "% Gegenereerd door jaarverslag.py -- niet met de hand aanpassen\n"
-        "\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}X rr >{\\raggedright\\arraybackslash}X rr@{}}\n"
-        "\\toprule\n"
-        f"\\textsc{{assets}} & {d0} & {d1} & \\textsc{{liabilities}} & {d0} & {d1} \\\\\n"
-        "\\midrule\n"
-        + "".join(lines)
-        + "\\midrule\n"
-        f"\\textbf{{TOTAL}} & \\textbf{{{fmt(ta0)}}} & \\textbf{{{fmt(ta1)}}} & "
-        f"\\textbf{{TOTAL}} & \\textbf{{{fmt(tl0)}}} & \\textbf{{{fmt(tl1)}}} \\\\\n"
-        "\\bottomrule\n\\end{tabularx}\n"
-    )
-
-
-def contact_name(doc: dict) -> str:
-    c = doc.get("contact") or {}
-    return c.get("company_name") or " ".join(filter(None, [c.get("firstname"), c.get("lastname")])) or "Onbekend"
-
-
-def partner_amount(doc: dict, partner_project_ids: set) -> Decimal:
-    amount = ZERO
-    for d in doc.get("details", []):
-        if d.get("project_id") not in partner_project_ids:
-            continue
-        if d.get("is_optional") and not d.get("is_selected", True):
-            continue
-        amount += dec(d.get("total_price_excl_tax_with_discount"))
-    return amount
-
-
-def partner_groups(invoices, estimates, projects, cfg, include_drafts: bool) -> dict[str, list]:
-    """Partnerbedragen per groep (Invoice sent / Signed / Created): [(contact, bedrag)]."""
-    codes = set(cfg.get("partners", {}).get("codes", []))
-    pids = {p["id"] for p in projects
-            if (m := CODE_RE.match(p["name"])) and m.group(1).upper() in codes}
-    groups = {"Invoice sent": [], "Signed": [], "Created": []}
-    for inv in invoices:
-        if inv.get("state") == "draft" and not include_drafts:
-            continue
-        amt = partner_amount(inv, pids)
-        if amt:
-            groups["Invoice sent"].append((contact_name(inv), amt))
-    for est in estimates:
-        state = est.get("state")
-        if state == "accepted":
-            target = "Signed"
-        elif state in ("open", "late") or (state == "draft" and include_drafts):
-            target = "Created"
-        else:
-            continue  # billed, rejected, archived: staan al bij facturen of tellen niet mee
-        amt = partner_amount(est, pids)
-        if amt:
-            groups[target].append((contact_name(est), amt))
-    for items in groups.values():
-        items.sort(key=lambda x: x[0].lower())
-    return groups
-
-
-def partner_table(groups: dict[str, list]) -> str:
-    parts = ["% Gegenereerd door jaarverslag.py -- niet met de hand aanpassen\n"]
-    for i, (title, items) in enumerate(groups.items()):
-        body = "".join(f"{tex(n)} & \\texteuro\\ {fmt(a)} \\\\\n" for n, a in items) \
-            or "\\emph{None} & \\\\\n"
-        tot = sum((a for _, a in items), ZERO)
-        parts.append(
-            "\\begin{minipage}[t]{0.32\\textwidth}\n"
-            "\\begin{tabularx}{\\linewidth}[t]{@{}>{\\raggedright\\arraybackslash}X r@{}}\n"
-            f"\\toprule\n\\multicolumn{{2}}{{@{{}}l}}{{\\textbf{{{title}}}}} \\\\\n\\midrule\n"
-            + body +
-            f"\\midrule\n\\textbf{{Total}} & \\textbf{{\\texteuro\\ {fmt(tot)}}} \\\\\n"
-            "\\bottomrule\n\\end{tabularx}\n\\end{minipage}"
-            + ("\\hfill\n" if i < 2 else "\n"))
-    return "".join(parts)
-
-
 # --------------------------------------------------------------------------
 # Tabellen per evenement
 # --------------------------------------------------------------------------
@@ -674,7 +548,7 @@ def event_checks(lines: list[EventLine], label_codes: set[str], report_by_code: 
 TOLERANCE = Decimal("0.01")
 
 
-def run_checks(tables, overview_rows, revenue, expenses, pl, bs_start, bs_end, names):
+def run_checks(tables, overview_rows, revenue, expenses, pl):
     """Rekent de cijfers na. Geeft (naam, status, detail) terug; status is OK, AFWIJKING of LET OP."""
     checks = []
 
@@ -708,20 +582,6 @@ def run_checks(tables, overview_rows, revenue, expenses, pl, bs_start, bs_end, n
     check("Categorieen: kosten = overzicht", grand.actual.debit, every_row.actual.debit, "overzicht", "regels")
     check("Categorieen: begroting = overzicht", grand.budget.result, every_row.budget.result, "overzicht", "regels")
 
-    # 4. Balans: debet = credit, en de regels tellen op tot het totaal
-    for label, report in (("begin", bs_start), ("eind", bs_end)):
-        assets, liabilities, ta, tl = balance_lines(report, names)
-        check(f"Balans {label}: activa = passiva", ta, tl, "activa", "passiva")
-        check(f"Balans {label}: activaregels = totaal", ta, sum(assets.values(), ZERO), "totaal", "regels")
-        check(f"Balans {label}: passivaregels = totaal", tl, sum(liabilities.values(), ZERO), "totaal", "regels")
-
-    # 5. Resultaat op de balans (nog niet afgesloten jaren) tegenover het resultaat van de periode
-    def open_result(report):
-        years = (report.get("credit", {}) or {}).get("open_years", []) or []
-        return sum((dec(y["value"]) for y in years), ZERO)
-
-    check("Balans: toename resultaat = overzicht", grand.actual.result,
-          open_result(bs_end) - open_result(bs_start), "overzicht", "balans", soft=True)
     return checks
 
 
@@ -736,10 +596,6 @@ EXAMPLE_DOC = r"""\documentclass[a4paper,11pt]{article}
 {\small\input{results_overview}}
 %(sections)s
 %(event_sections)s
-\subsection*{Balance Sheet}
-{\small\input{balance_sheet}}
-\subsection*{Partner Agreements}
-{\small\input{partners}}
 \end{document}
 """
 
@@ -764,8 +620,6 @@ def parse_args(argv=None):
                         "(standaard events.csv naast het script, of in de --fixtures-map)")
     p.add_argument("--budget", type=Path, help="optioneel CSV met kolommen code,debit,credit")
     p.add_argument("--out", type=Path, default=Path("output"))
-    p.add_argument("--include-drafts", action="store_true",
-                   help="concept-facturen en -offertes meetellen in de partnertabellen")
     p.add_argument("--fixtures", type=Path, help="map met opgeslagen API-antwoorden (testen zonder token)")
     return p.parse_args(argv)
 
@@ -832,22 +686,15 @@ def make_client(cfg: dict, fixtures: Path | None):
 def fetch_data(client, start: dt.date, end: dt.date) -> dict:
     """Haalt alles op wat het verslag nodig heeft (ruwe API-antwoorden)."""
     period = f"{start:%Y%m%d}..{end:%Y%m%d}"
-    before_start = start - dt.timedelta(days=1)
-    doc_filter = {"filter": f"period:{period},state:all"}
-    invoices = paged(client, "sales_invoices", doc_filter)
     return {
         "projects": paged(client, "projects", {"filter": "state:all"}),
         "revenue": paged(client, "reports/revenue_by_project", {"period": period}, "revenue_by_project"),
         "expenses": paged(client, "reports/expenses_by_project", {"period": period}, "expenses_by_project"),
         "pl": client.get("reports/profit_loss", {"period": period}),
         "ledger": client.get("ledger_accounts"),
-        "bs_start": client.get("reports/balance_sheet", {"period": f"{before_start:%Y%m}"}),
-        "bs_end": client.get("reports/balance_sheet", {"period": f"{end:%Y%m}"}),
-        "invoices": invoices,
-        "estimates": paged(client, "estimates", doc_filter),
         # Voor de evenementtabellen: de boekregels zelf (de rapporten kennen geen omschrijvingen)
         "documents": {
-            "sales_invoices": invoices,
+            "sales_invoices": paged(client, "sales_invoices", {"filter": f"period:{period},state:all"}),
             "external_sales_invoices": paged(client, "external_sales_invoices", {"filter": f"period:{period}"}),
             "purchase_invoices": paged(client, "documents/purchase_invoices", {"filter": f"period:{period}"}),
             "receipts": paged(client, "documents/receipts", {"filter": f"period:{period}"}),
@@ -874,13 +721,10 @@ class Report:
     categories: list[dict]              # [[categories]] uit config.toml
     tables: dict[str, list[Row]]        # categorie-cijfer -> regels
     overview_rows: list[Row]            # één regel per categorie
-    balance_start: tuple                # (activa, passiva, totaal activa, totaal passiva)
-    balance_end: tuple
     lines: list[EventLine]
     events: dict[str, Event]
     events_path: Path | None            # None = events.csv niet gevonden
     organizers: list[tuple[str, list[EventRow]]]
-    partners: dict[str, list]
     checks: list[tuple[str, str, str]]
     warnings: list[str]
     files: dict[str, str]               # bestandsnaam -> LaTeX
@@ -891,8 +735,7 @@ class Report:
 
 
 def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, end: dt.date,
-                 events_path: Path, budget: dict[str, Amounts] | None = None,
-                 include_drafts: bool = False) -> Report:
+                 events_path: Path, budget: dict[str, Amounts] | None = None) -> Report:
     """Rekent alles uit en maakt de LaTeX-bestanden (in het geheugen)."""
     warnings: list[str] = []
     tables = build_results(cfg, data["projects"], data["revenue"], data["expenses"], budget or {}, warnings)
@@ -907,11 +750,7 @@ def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, e
         sections.append(f"\\subsubsection*{{{tex(c['name'])}}}\n{{\\small\\input{{results_{c['file']}}}}}")
     files = {"results_overview.tex": results_table(overview_rows), **files}
 
-    names = {la["id"]: la["name"] for la in data["ledger"]}
-    files["balance_sheet.tex"] = balance_table(data["bs_start"], data["bs_end"], names, start, end)
-
-    checks = run_checks(tables, overview_rows, data["revenue"], data["expenses"], data["pl"],
-                        data["bs_start"], data["bs_end"], names)
+    checks = run_checks(tables, overview_rows, data["revenue"], data["expenses"], data["pl"])
 
     report_by_code = {r.code: r.actual for rows in tables.values() for r in rows}
     lines = event_lines(data["documents"], data["projects"], data["ledger"], label_codes)
@@ -931,9 +770,6 @@ def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, e
     checks += event_checks(lines, label_codes, report_by_code)
     warnings += event_warnings(lines, events, events_cfg.get("max_days", DEFAULT_MAX_DAYS))
 
-    partners = partner_groups(data["invoices"], data["estimates"], data["projects"], cfg, include_drafts)
-    files["partners.tex"] = partner_table(partners)
-
     files["example.tex"] = EXAMPLE_DOC % {
         "period": f"{start:%d-%m-%Y} -- {end:%d-%m-%Y}",
         "sections": "\n".join(sections),
@@ -941,8 +777,7 @@ def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, e
                           if event_sections else ""}
 
     return Report(start, end, cfg["categories"], tables, overview_rows,
-                  balance_lines(data["bs_start"], names), balance_lines(data["bs_end"], names),
-                  lines, events, events_path if events_path.exists() else None, organizers, partners,
+                  lines, events, events_path if events_path.exists() else None, organizers,
                   checks, warnings, files)
 
 
@@ -958,7 +793,7 @@ def main(argv=None):
     data = fetch_data(client, args.start, args.end)
     events_path = find_events(args.events, args.fixtures)
     report = build_report(cfg, label_codes, data, args.start, args.end, events_path,
-                          load_budget(args.budget), args.include_drafts)
+                          load_budget(args.budget))
     if report.events_path:
         print(f"Evenementenlijst: {report.events_path}", file=sys.stderr)
 
@@ -979,8 +814,6 @@ def main(argv=None):
               f"{fmt_plain(r.actual.credit):>12}  resultaat {fmt_plain(r.actual.result):>12}", file=sys.stderr)
     print(f"  {'TOTAL':<34} kosten {fmt_plain(grand.actual.debit):>12}  opbrengsten "
           f"{fmt_plain(grand.actual.credit):>12}  resultaat {fmt_plain(grand.actual.result):>12}", file=sys.stderr)
-    print("Partners: " + ", ".join(f"{k} {fmt_plain(sum((a for _, a in v), ZERO))}"
-                                   for k, v in report.partners.items()), file=sys.stderr)
     print("\nControles:", file=sys.stderr)
     for name, status, detail in report.checks:
         print(f"  [{status:<9}] {name}: {detail}", file=sys.stderr)
