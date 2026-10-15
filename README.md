@@ -30,7 +30,7 @@ Elk project in Moneybird heet `CODE - omschrijving`, bijvoorbeeld `C106 - iCIS b
 - De **hele code** bepaalt de regel (C106 = Other borrels).
 - Alle projecten met dezelfde code worden opgeteld.
 
-Welke code bij welke regelnaam hoort, staat in **`codes.csv`** (kolommen `code,name`, te bewerken in Excel of een teksteditor). Een nieuwe regel toevoegen is één regel in dat bestand. Het script weigert te draaien bij dubbele of ongeldige codes of een code waarvan de categorie niet in `config.toml` staat. De categorieën (cijfer, naam, bestandsnaam), het administratie-id en de opmaak staan in `config.toml`. Een ander codebestand kies je met `--codes`.
+Welke code bij welke regelnaam hoort, staat in **`codes.csv`** (kolommen `code,name`). Bewerken kan op de pagina **Codes** in het dashboard (`/codes`, link bij Per categorie): daar zie je per code de projecten in Moneybird en wanneer er voor het laatst op geboekt is ("actief" = in het huidige collegejaar), en kun je codes toevoegen, hernoemen en verwijderen. In de kolom **Label verplicht** vink je aan bij welke codes elke boekregel een evenementlabel `[E…]` moet hebben (dat past `label_codes` in `config.toml` aan). Verwijderen kan alleen als de code nergens gebruikt wordt (geen project in Moneybird, niet begroot, geen labelcode). Met de hand in Excel of een teksteditor mag ook. Het script weigert te draaien bij dubbele of ongeldige codes of een code waarvan de categorie niet in `config.toml` staat. De categorieën (cijfer, naam, bestandsnaam), het administratie-id en de opmaak staan in `config.toml`. Een ander codebestand kies je met `--codes`.
 
 **Debit** = kosten, **credit** = opbrengsten, allebei exclusief btw, zoals Moneybird ze in de winst-en-verliesrekening boekt. **Result** = credit − debit.
 

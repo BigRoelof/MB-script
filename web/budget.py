@@ -1,21 +1,18 @@
-"""De begrotingseditor (/begroting) en de API waarmee die opslaat, plus codes toevoegen/hernoemen."""
+"""De begrotingseditor (/begroting) en de API waarmee die opslaat."""
 
 from __future__ import annotations
 
 import datetime as dt
 import hashlib
-import tomllib
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
-from urllib.parse import urlsplit
 
 from flask import Blueprint, abort, current_app, jsonify, render_template, request
 
 from verslag.amounts import CODE_RE, Amounts, category_digit
 from verslag.budget import Budget, budget_path, budget_years, college_year, load_budget, save_budget, year_label
-from verslag.config import PROJECT_DIR, edit_codes
 
-from .common import Settings, has_token, load_cfg, load_or_error, read_settings
+from .common import Settings, api_error, has_token, json_body, load_cfg, load_or_error, read_settings
 
 bp = Blueprint("begroting", __name__)
 
@@ -23,24 +20,6 @@ bp = Blueprint("begroting", __name__)
 def file_version(path: Path) -> str:
     """Kenmerk van de inhoud, om te merken dat het bestand ergens anders is aangepast."""
     return hashlib.sha1(path.read_bytes()).hexdigest()[:16] if path.exists() else ""
-
-
-def json_body() -> dict:
-    """Alleen JSON van deze pagina zelf. Een andere website kan zo geen wijzigingen insturen:
-    JSON van een ander domein vraagt eerst toestemming (CORS) en die geven we niet."""
-    if not request.is_json:
-        abort(415)
-    origin = request.headers.get("Origin")
-    if origin and urlsplit(origin).netloc != request.host:
-        abort(403)
-    body = request.get_json(silent=True)
-    if not isinstance(body, dict):
-        abort(400)
-    return body
-
-
-def api_error(message: str, status: int):
-    return jsonify(error=message), status
 
 
 def parse_amount(value) -> Decimal:
@@ -192,29 +171,3 @@ def budget_status(year: int):
         abort(400)
     save_budget(budget, path)
     return jsonify(version=file_version(path))
-
-
-def code_categories() -> list[str]:
-    cfg = tomllib.loads((PROJECT_DIR / "config.toml").read_text(encoding="utf-8"))
-    return [c["digit"] for c in cfg["categories"]]
-
-
-@bp.post("/api/codes")
-def code_add():
-    body = json_body()
-    try:
-        edit_codes(current_app.config["CODES"], code_categories(), str(body.get("code", "")),
-                      str(body.get("name", "")), new=True)
-    except ValueError as err:
-        return api_error(str(err), 400)
-    return jsonify(ok=True), 201
-
-
-@bp.put("/api/codes/<code>")
-def code_rename(code: str):
-    body = json_body()
-    try:
-        edit_codes(current_app.config["CODES"], code_categories(), code, str(body.get("name", "")), new=False)
-    except ValueError as err:
-        return api_error(str(err), 400)
-    return jsonify(ok=True)

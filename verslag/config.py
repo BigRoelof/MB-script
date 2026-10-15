@@ -6,6 +6,7 @@ import calendar
 import csv
 import io
 import os
+import re
 import tomllib
 import datetime as dt
 from pathlib import Path
@@ -86,6 +87,26 @@ def _clean_name(name: str) -> str:
     return name
 
 
+def _code_lines(path: Path) -> tuple[list[str], list[int], str]:
+    """codes.csv als regels, de nummers van de dataregels (incl. kop) en het scheidingsteken."""
+    lines = path.read_text(encoding="utf-8-sig").splitlines()
+    data = [i for i, ln in enumerate(lines) if ln.strip() and not ln.lstrip().startswith("#")]
+    delimiter = ";" if lines[data[0]].count(";") > lines[data[0]].count(",") else ","
+    return lines, data, delimiter
+
+
+def _write_codes(path: Path, lines: list[str], category_digits: list[str]) -> None:
+    """Schrijft codes.csv via een tijdelijk bestand, alleen als het daarna nog geldig is."""
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    try:
+        load_codes(tmp, category_digits)       # nog steeds geldig?
+    except SystemExit as err:
+        tmp.unlink()
+        raise ValueError(str(err.code))
+    os.replace(tmp, path)
+
+
 def edit_codes(path: Path, category_digits: list[str], code: str, name: str, *, new: bool) -> None:
     """Voegt een code toe aan codes.csv of hernoemt er een. Commentaar en volgorde blijven staan.
 
@@ -96,16 +117,13 @@ def edit_codes(path: Path, category_digits: list[str], code: str, name: str, *, 
         raise ValueError(f"'{code}' is geen geldige code (verwacht bijvoorbeeld C108).")
     if category_digit(code) not in category_digits:
         raise ValueError(f"Code {code} hoort bij geen categorie.")
-    original = path.read_text(encoding="utf-8-sig")
     existing = load_codes(path, category_digits)
     if new and code in existing:
         raise ValueError(f"Code {code} bestaat al ({existing[code]}).")
     if not new and code not in existing:
         raise ValueError(f"Code {code} bestaat niet.")
 
-    lines = original.splitlines()
-    data = [i for i, ln in enumerate(lines) if ln.strip() and not ln.lstrip().startswith("#")]
-    delimiter = ";" if lines[data[0]].count(";") > lines[data[0]].count(",") else ","
+    lines, data, delimiter = _code_lines(path)
 
     def line_code(i):
         return lines[i].split(delimiter, 1)[0].strip().strip('"').upper()
@@ -120,12 +138,51 @@ def edit_codes(path: Path, category_digits: list[str], code: str, name: str, *, 
     else:
         i = next(i for i in data[1:] if line_code(i) == code)
         lines[i] = _code_line(code, name, delimiter)
+    _write_codes(path, lines, category_digits)
 
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    try:
-        load_codes(tmp, category_digits)       # nog steeds geldig?
-    except SystemExit as err:
-        tmp.unlink()
-        raise ValueError(str(err.code))
-    os.replace(tmp, path)
+
+def delete_code(path: Path, category_digits: list[str], code: str) -> None:
+    """Haalt een code uit codes.csv. Of de code nog ergens gebruikt wordt, controleert de aanroeper."""
+    code = code.strip().upper()
+    if code not in load_codes(path, category_digits):
+        raise ValueError(f"Code {code} bestaat niet.")
+    lines, data, delimiter = _code_lines(path)
+    i = next(i for i in data[1:] if lines[i].split(delimiter, 1)[0].strip().strip('"').upper() == code)
+    del lines[i]
+    _write_codes(path, lines, category_digits)
+
+
+LABEL_CODES_RE = re.compile(r"^label_codes\s*=\s*\[.*?^\]", re.MULTILINE | re.DOTALL)
+
+
+def set_label_code(config_path: Path, codes_path: Path, code: str, required: bool) -> None:
+    """Zet een code aan of uit in [events] label_codes van config.toml (elke regel een evenementlabel).
+
+    Alleen de lijst label_codes wordt herschreven, één code per regel met de naam als commentaar;
+    de rest van config.toml blijft zoals het is.
+    """
+    code = code.strip().upper()
+    text = config_path.read_text(encoding="utf-8")
+    cfg = tomllib.loads(text)
+    names = load_codes(codes_path, [c["digit"] for c in cfg["categories"]])
+    if code not in names:
+        raise ValueError(f"Code {code} bestaat niet.")
+    events = cfg.get("events", {})
+    codes = {c.upper() for c in events.get("label_codes", [])}
+    codes = codes | {code} if required else codes - {code}
+
+    lines = [f'    "{c}",'.ljust(30) + f"# {names[c]}" if c in names else f'    "{c}",' for c in sorted(codes)]
+    block = "label_codes = [\n" + "".join(line + "\n" for line in lines) + "]"
+    match = LABEL_CODES_RE.search(text)
+    if match:
+        new = text[:match.start()] + block + text[match.end():]
+    elif re.search(r"^\[events\]\s*$", text, re.MULTILINE):
+        new = re.sub(r"^\[events\]\s*$", "[events]\n" + block, text, count=1, flags=re.MULTILINE)
+    else:
+        new = text.rstrip("\n") + "\n\n[events]\n" + block + "\n"
+    if {c.upper() for c in tomllib.loads(new).get("events", {}).get("label_codes", [])} != codes:
+        raise ValueError("config.toml kon niet veilig worden aangepast; pas label_codes met de hand aan.")
+    tmp = config_path.with_name(config_path.name + ".tmp")
+    tmp.write_text(new, encoding="utf-8")
+    os.replace(tmp, config_path)
+

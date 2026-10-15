@@ -34,8 +34,11 @@ def codes_file(tmp_path) -> Path:
 
 @pytest.fixture
 def client(tmp_path, codes_file):
-    """Testclient voor het dashboard, met een lege begrotingsmap en een kopie van codes.csv."""
+    """Testclient voor het dashboard, met een lege begrotingsmap en kopieën van codes.csv en config.toml."""
     from web import create_app
     app = create_app()
-    app.config.update(TESTING=True, FIXTURES=FIXTURES, BUDGET_DIR=tmp_path / "begroting", CODES=codes_file)
+    config_file = tmp_path / "config.toml"
+    shutil.copy(PROJECT_DIR / "config.toml", config_file)
+    app.config.update(TESTING=True, FIXTURES=FIXTURES, BUDGET_DIR=tmp_path / "begroting", CODES=codes_file,
+                      CONFIG=config_file)
     return app.test_client()

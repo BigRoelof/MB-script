@@ -107,13 +107,21 @@ def make_client(cfg: dict, fixtures: Path | None):
     return MoneybirdClient(token, cfg["administration_id"])
 
 
+def fetch_project_reports(client, start: dt.date, end: dt.date) -> tuple[list, list]:
+    """De projectrapporten over een periode van hele maanden: (opbrengsten, kosten) per project."""
+    period = f"{start:%Y%m%d}..{end:%Y%m%d}"
+    return (paged(client, "reports/revenue_by_project", {"period": period}, "revenue_by_project"),
+            paged(client, "reports/expenses_by_project", {"period": period}, "expenses_by_project"))
+
+
 def fetch_data(client, start: dt.date, end: dt.date) -> dict:
     """Haalt alles op wat het verslag nodig heeft (ruwe API-antwoorden)."""
     period = f"{start:%Y%m%d}..{end:%Y%m%d}"
+    revenue, expenses = fetch_project_reports(client, start, end)
     return {
         "projects": paged(client, "projects", {"filter": "state:all"}),
-        "revenue": paged(client, "reports/revenue_by_project", {"period": period}, "revenue_by_project"),
-        "expenses": paged(client, "reports/expenses_by_project", {"period": period}, "expenses_by_project"),
+        "revenue": revenue,
+        "expenses": expenses,
         "pl": client.get("reports/profit_loss", {"period": period}),
         "ledger": client.get("ledger_accounts"),
         # Voor de evenementtabellen: de boekregels zelf (de rapporten kennen geen omschrijvingen)

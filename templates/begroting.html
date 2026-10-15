@@ -64,6 +64,7 @@
     <a href="#cat-{{ c.cat.file }}">{{ c.cat.name }}<span class="rail-sum" data-sum="{{ c.cat.digit }}" data-field="result"></span></a>
     {% endfor %}
     <p class="source">Opgeslagen in<br><code>begroting/{{ year }}-{{ year + 1 }}.csv</code></p>
+    <p class="source"><a href="{{ url_for('codes.codes_page', **s.query()) }}">Alle codes beheren</a></p>
     <p class="source tips"><strong>Tips</strong><br>
       Rekenen mag: <code>4*375</code>.<br>
       <kbd>Enter</kbd> of <kbd>↓</kbd> gaat naar de volgende regel.</p>
@@ -210,7 +211,7 @@
   "saveUrl": url_for('begroting.budget_save', year=year),
   "statusUrl": url_for('begroting.budget_status', year=year),
   "createUrl": url_for('begroting.budget_create', year=year),
-  "codesUrl": url_for('begroting.code_add'),
+  "codesUrl": url_for('codes.code_add'),
 }|tojson }}</script>
 <div class="tooltip" role="tooltip" hidden></div>
 </body>

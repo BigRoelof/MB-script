@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thalia codes</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+<script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
+<script src="{{ url_for('static', filename='codes.js') }}" defer></script>
+</head>
+<body class="codes-page">
+<header class="topbar">
+  <a class="wordmark" href="{{ url_for('pages.index', **s.query()) }}">Thalia<span>Codes</span></a>
+  <div class="actions">
+    <span class="save-state" role="status" aria-live="polite"></span>
+    <a class="ghost" href="{{ url_for('begroting.budget_page', **s.query()) }}">Begroting</a>
+    <a class="ghost" href="{{ url_for('pages.index', **s.query()) }}">Naar het dashboard</a>
+  </div>
+</header>
+
+{% if error %}
+<main class="layout single">
+  <section class="problem" role="alert">
+    <h1>De codes kunnen niet worden geladen</h1>
+    <p>{{ error }}</p>
+  </section>
+</main>
+{% else %}
+<div class="layout">
+  <nav class="rail" aria-label="Categorieën">
+    {% for c in categories %}
+    <a href="#cat-{{ c.cat.file }}">{{ c.cat.name }}<span class="rail-sum">{{ c.rows|length }}</span></a>
+    {% endfor %}
+    <p class="source">Opgeslagen in<br><code>codes.csv</code></p>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <h1 class="page-title">Codes</h1>
+      <p class="lede">{{ total }} codes. Elke code is een regel in de tabellen van het jaarverslag; het eerste cijfer bepaalt de categorie.
+        In Moneybird hoort bij een code een project dat met de code begint, bijvoorbeeld <code>C201 - Events committee</code>.</p>
+      <div class="steps">
+        <strong>Nieuwe kostenpost, bijvoorbeeld voor een nieuwe commissie?</strong>
+        <ol>
+          <li>Voeg hieronder een code toe in de juiste categorie.</li>
+          <li>Maak in Moneybird een project dat met die code begint (<code>C219 - Naam</code>) en boek daarop.</li>
+          <li>Neem de code mee in de <a href="{{ url_for('begroting.budget_page', **s.query()) }}">begroting</a>.</li>
+        </ol>
+      </div>
+      {% if projects_error %}
+      <p class="banner">De projecten uit Moneybird konden niet worden geladen ({{ projects_error }}). Daarom is niet te zien welke codes een project hebben, en kan er niets verwijderd worden.</p>
+      {% endif %}
+      {% if orphans %}
+      <div class="banner warn">
+        <strong>Projecten in Moneybird met een code die hier niet staat</strong> — die komen niet in de tabellen terecht:
+        <ul>{% for code, ps in orphans %}<li><span class="code">{{ code }}</span> {{ ps|map(attribute='name')|join(', ') }}</li>{% endfor %}</ul>
+      </div>
+      {% endif %}
+    </section>
+
+    {% for c in categories %}
+    <section class="budget-category" id="cat-{{ c.cat.file }}" aria-labelledby="h-{{ c.cat.file }}">
+      <div class="section-head">
+        <h2 id="h-{{ c.cat.file }}"><span class="code">{{ c.cat.digit }}</span>{{ c.cat.name }}</h2>
+      </div>
+      <table class="money codes-table">
+        <colgroup><col class="c-code"><col class="c-name"><col class="c-label"><col class="c-projects"><col class="c-usage"><col class="c-action"></colgroup>
+        <thead><tr><th>Code</th><th>Naam</th>
+          <th class="label-head"><span tabindex="0" data-tip="Label verplicht&#10;Elke boekregel onder deze code hoort een evenementlabel [E…] te hebben. Regels zonder label komen bij de waarschuwingen.">Label verplicht</span></th>
+          <th>Project in Moneybird</th><th>Laatst gebruikt in</th><th><span class="visually-hidden">Verwijderen</span></th></tr></thead>
+        <tbody>
+        {% for r in c.rows %}
+          <tr data-code="{{ r.code }}">
+            <td class="code-cell">{{ r.code }}</td>
+            <td class="name">
+              <span class="label">{{ r.name }}</span>
+              <button type="button" class="icon rename" aria-label="{{ r.code }} hernoemen" title="Hernoemen">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 3.5l2 2L6 12H4v-2z"/></svg></button>
+            </td>
+            <td class="label-cell">
+              <input type="checkbox" class="label-toggle" {{ 'checked' if r.label }}
+                     aria-label="{{ r.code }}: evenementlabel verplicht">
+            </td>
+            <td class="projects">
+              {% for p in r.projects %}<span class="project{{ ' archived' if p.archived }}">{{ p.name }}{% if p.archived %} <em>(gearchiveerd)</em>{% endif %}</span>
+              {% else %}{% if not projects_error %}<span class="none">geen project</span>{% endif %}{% endfor %}
+            </td>
+            <td class="usage">
+              {% if r.last_used == "actief" %}<span class="active">actief</span>
+              {% elif r.last_used %}{{ r.last_used }}
+              {% elif not projects_error %}<span class="none">nog niet gebruikt</span>{% endif %}
+            </td>
+            <td class="action">
+              {% if r.deletable %}
+              <button type="button" class="icon delete" data-name="{{ r.name }}" aria-label="{{ r.code }} verwijderen" title="Verwijderen">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M5 4.5l.5 8.5h5l.5-8.5"/></svg></button>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+          <tr class="add-row" hidden>
+            <td colspan="6">
+              <form class="add-code" data-digit="{{ c.cat.digit }}">
+                <label>Code <input name="code" required pattern="[Cc]{{ c.cat.digit }}[0-9]{2}" maxlength="4" size="5"
+                       value="{{ c.next_code or '' }}"></label>
+                <label class="grow">Naam <input name="name" required maxlength="80" placeholder="bijv. Nieuwe commissie"></label>
+                <button type="submit" class="primary">Toevoegen</button>
+                <button type="button" class="ghost cancel">Annuleren</button>
+                <span class="form-error" role="alert"></span>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <button type="button" class="link-button show-add">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>Code toevoegen aan {{ c.cat.name }}</button>
+    </section>
+    {% endfor %}
+  </main>
+</div>
+
+<dialog id="delete" aria-labelledby="delete-title">
+  <form method="dialog" class="dialog-form">
+    <h2 id="delete-title">Code verwijderen?</h2>
+    <p><strong class="delete-what"></strong> wordt uit <code>codes.csv</code> gehaald. Er is geen project in Moneybird voor en de code staat in geen enkele begroting.</p>
+    <p class="form-error" role="alert"></p>
+    <div class="dialog-actions">
+      <button type="button" class="ghost" value="cancel">Annuleren</button>
+      <button type="submit" class="primary">Verwijderen</button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
+
+<script type="application/json" id="codes-state">{{ {"codesUrl": url_for('codes.code_add')}|tojson }}</script>
+<div class="tooltip" role="tooltip" hidden></div>
+</body>
+</html>

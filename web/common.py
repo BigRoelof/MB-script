@@ -7,18 +7,22 @@ import datetime as dt
 import os
 import urllib.error
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
-from flask import current_app, request
+from flask import abort, current_app, jsonify, request
 
 from verslag.budget import college_year, find_budget
-from verslag.config import PROJECT_DIR, load_config, validate_period
+from verslag.config import load_config, validate_period
 from verslag.events import find_events
-from verslag.moneybird import fetch_data, make_client
+from verslag.amounts import dec
+from verslag.moneybird import fetch_data, fetch_project_reports, make_client
 from verslag.report import build_report
 
 # Opgehaalde Moneybird-gegevens per (bron, administratie, periode): (tijdstip, data).
 # De live API is traag en heeft een rate limit; "Opnieuw ophalen" leegt de cache.
 _cache: dict[tuple, tuple[dt.datetime, dict]] = {}
+# Per (bron, administratie, collegejaar): de project-id's met boekingen in dat jaar (voor "Laatst gebruikt in")
+_booked: dict[tuple, set[str]] = {}
 
 
 def has_token() -> bool:
@@ -63,11 +67,21 @@ def read_settings() -> Settings:
 
 def load_cfg():
     """config.toml en codes.csv: (cfg, label_codes)."""
-    return load_config(PROJECT_DIR / "config.toml", current_app.config["CODES"])
+    return load_config(current_app.config["CONFIG"], current_app.config["CODES"])
 
 
 def cache_key(s: Settings, cfg: dict) -> tuple:
     return (s.source, cfg.get("administration_id"), s.start, s.end)
+
+
+def load_data(s: Settings, cfg: dict) -> tuple[dt.datetime, dict]:
+    """De ruwe Moneybird-gegevens van deze bron en periode, uit de cache of opgehaald: (tijdstip, data)."""
+    validate_period(s.start, s.end)
+    key = cache_key(s, cfg)
+    if key not in _cache:
+        fixtures = current_app.config["FIXTURES"] if s.source == "testdata" else None
+        _cache[key] = (dt.datetime.now(), fetch_data(make_client(cfg, fixtures), s.start, s.end))
+    return _cache[key]
 
 
 def load(s: Settings):
@@ -75,11 +89,7 @@ def load(s: Settings):
     validate_period(s.start, s.end)
     cfg, label_codes = load_cfg()
     fixtures = current_app.config["FIXTURES"] if s.source == "testdata" else None
-    key = cache_key(s, cfg)
-    if key not in _cache:
-        client = make_client(cfg, fixtures)
-        _cache[key] = (dt.datetime.now(), fetch_data(client, s.start, s.end))
-    fetched_at, data = _cache[key]
+    fetched_at, data = load_data(s, cfg)
     # De begroting wordt elke keer opnieuw gelezen: wijzigingen in de editor zijn meteen zichtbaar
     report = build_report(cfg, label_codes, data, s.start, s.end,
                           find_events(None, fixtures),
@@ -96,7 +106,42 @@ def load_or_error(s: Settings):
         return None, f"Moneybird is niet bereikbaar ({err.reason}). Controleer je internetverbinding."
 
 
+def booked_projects(source: str, cfg: dict, year: int) -> set[str]:
+    """Project-id's met kosten of opbrengsten in collegejaar `year` (uit de projectrapporten)."""
+    key = (source, cfg.get("administration_id"), year)
+    if key not in _booked:
+        fixtures = current_app.config["FIXTURES"] if source == "testdata" else None
+        revenue, expenses = fetch_project_reports(make_client(cfg, fixtures),
+                                                  dt.date(year, 9, 1), dt.date(year + 1, 8, 31))
+        _booked[key] = {r["project_id"] for r in revenue + expenses if dec(r["amount"]) != 0 and r["project_id"]}
+    return _booked[key]
+
+
 def clear_cache(s: Settings) -> None:
     """Vergeet de opgehaalde gegevens van deze bron en periode ("Opnieuw ophalen")."""
     for key in [k for k in _cache if k[0] == s.source and k[2:] == (s.start, s.end)]:
         del _cache[key]
+    for key in [k for k in _booked if k[0] == s.source]:
+        del _booked[key]
+
+
+# --------------------------------------------------------------------------
+# Voor de API's (begroting en codes)
+# --------------------------------------------------------------------------
+
+def json_body() -> dict:
+    """Alleen JSON van deze pagina zelf. Een andere website kan zo geen wijzigingen insturen:
+    JSON van een ander domein vraagt eerst toestemming (CORS) en die geven we niet."""
+    if not request.is_json:
+        abort(415)
+    origin = request.headers.get("Origin")
+    if origin and urlsplit(origin).netloc != request.host:
+        abort(403)
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        abort(400)
+    return body
+
+
+def api_error(message: str, status: int):
+    return jsonify(error=message), status

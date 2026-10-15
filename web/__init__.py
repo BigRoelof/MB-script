@@ -4,6 +4,7 @@
 - filters  opmaak in de templates (bedragen, datums) en de voortgangsbalk
 - pages    de startpagina en de downloads (.tex, zip)
 - budget   de begrotingseditor en de API waarmee die opslaat
+- codes    codes beheren: overzicht, toevoegen, hernoemen en verwijderen
 """
 
 from __future__ import annotations
@@ -20,10 +21,12 @@ def create_app() -> Flask:
     app.config["FIXTURES"] = PROJECT_DIR / "tests" / "fixtures"
     app.config["BUDGET_DIR"] = BUDGET_DIR
     app.config["CODES"] = PROJECT_DIR / "codes.csv"
+    app.config["CONFIG"] = PROJECT_DIR / "config.toml"
     app.config["TEMPLATES_AUTO_RELOAD"] = True  # aanpassingen aan de template meteen zichtbaar
 
-    from . import budget, filters, pages
+    from . import budget, codes, filters, pages
     filters.register(app)
     app.register_blueprint(pages.bp)
     app.register_blueprint(budget.bp)
+    app.register_blueprint(codes.bp)
     return app

@@ -1,5 +1,7 @@
 """Het dashboard: pagina's, de schakelaar voor de begroting en de begrotings-API."""
 
+import datetime as dt
+import json
 import re
 import zipfile
 from decimal import Decimal
@@ -7,7 +9,10 @@ from io import BytesIO
 
 import pytest
 
+import web.codes
+from conftest import FIXTURES
 from verslag.amounts import Amounts, Row
+from verslag.budget import college_year
 from web.filters import budget_progress, eur_filter
 
 PERIOD = "van=2026-09&tm=2027-08&bron=testdata"
@@ -99,3 +104,63 @@ def test_voortgangsbalk_leeg_zonder_begroting_en_boekingen():
 
 def test_euro_met_harde_spatie():
     assert eur_filter(Decimal("-1234.5")) == "−€ 1.234,50"
+
+
+def test_codespagina(client):
+    page = client.get(f"/codes?{PERIOD}").get_data(as_text=True)
+    assert 'data-code="C101"' in page
+    assert "C101 - Borrel Drink costs" in page          # project uit Moneybird
+    assert "label verplicht" in page
+
+
+def test_code_verwijderen_alleen_als_ongebruikt(client, codes_file):
+    # C101: heeft een project in Moneybird en is een labelcode
+    r = client.delete(f"/api/codes/C101?{PERIOD}", json={})
+    assert r.status_code == 409 and "project" in r.json["error"]
+    # C218 (WISO): geen project in de testdata, maar staat in de begroting
+    client.post("/api/begroting/2026", json={"bron": "leeg"})
+    client.put("/api/begroting/2026", json={"version": version(client),
+                                            "rows": {"C218": {"debit": "250", "credit": "0"}}})
+    r = client.delete(f"/api/codes/C218?{PERIOD}", json={})
+    assert r.status_code == 409 and "begroting" in r.json["error"]
+    # Een nieuwe, ongebruikte code mag weg
+    client.post("/api/codes", json={"code": "C219", "name": "Nieuwe commissie"})
+    assert client.delete(f"/api/codes/C219?{PERIOD}", json={}).status_code == 200
+    assert "C219" not in codes_file.read_text()
+    assert client.delete(f"/api/codes/C219?{PERIOD}", json={}).status_code == 400
+
+
+def test_laatst_gebruikt_zoekt_terug_tot_een_leeg_jaar(client, monkeypatch):
+    now = college_year(dt.date.today())
+    projects = json.loads((FIXTURES / "projects.json").read_text())
+    c101 = next(p["id"] for p in projects if p["name"].startswith("C101"))
+    c105 = next(p["id"] for p in projects if p["name"].startswith("C105"))
+    # C105 geboekt in de laatste twee jaar, C101 alleen twee jaar geleden; drie jaar geleden niets meer
+    booked = {now: {c105}, now - 1: {c105}, now - 2: {c101}, now - 3: set()}
+    asked = []
+
+    def fake(source, cfg, year):
+        asked.append(year)
+        return booked.get(year, {c101})
+    monkeypatch.setattr(web.codes, "booked_projects", fake)
+    page = client.get(f"/codes?{PERIOD}").get_data(as_text=True)
+
+    def usage(code):
+        cell = re.search(rf'data-code="{code}".*?<td class="usage">(.*?)</td>', page, re.S).group(1)
+        return re.sub(r"<[^>]+>", "", cell).strip()
+    assert usage("C105") == "actief"
+    assert usage("C101") == f"{now - 2}–{(now - 1) % 100:02d}"
+    assert usage("C102") == "nog niet gebruikt"
+    assert asked == [now, now - 1, now - 2, now - 3]   # stopt bij het lege jaar
+
+
+def test_label_verplicht_via_api(client):
+    assert client.put("/api/codes/C208/label", json={"required": True}).status_code == 200
+    page = client.get(f"/codes?{PERIOD}").get_data(as_text=True)
+    row = re.search(r'<tr data-code="C208">(.*?)</tr>', page, re.S).group(1)
+    assert 'class="label-toggle" checked' in row
+    assert client.put("/api/codes/C208/label", json={"required": False}).status_code == 200
+    page = client.get(f"/codes?{PERIOD}").get_data(as_text=True)
+    assert 'checked' not in re.search(r'<tr data-code="C208">(.*?)</tr>', page, re.S).group(1)
+    assert client.put("/api/codes/C208/label", json={"required": "ja"}).status_code == 400
+    assert client.put("/api/codes/C999/label", json={"required": True}).status_code == 400

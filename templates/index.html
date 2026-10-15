@@ -135,6 +135,8 @@
         <a class="download" href="{{ url_for('begroting.budget_page', jaar=budget_year, **s.query()) }}">
           <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 3.5l2 2L6 12H4v-2z"/></svg>{{ 'Begroting bewerken' if budget_exists else 'Begroting maken' }}</a>
         {% endif %}
+        <a class="download" href="{{ url_for('codes.codes_page', **s.query()) }}">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4h10M3 8h10M3 12h6"/></svg>Codes</a>
         {{ download("results_overview.tex", "Overzicht .tex") }}
       </div>
       {% if budget and not full_year %}
