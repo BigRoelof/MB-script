@@ -3,7 +3,7 @@
 
 document.addEventListener("DOMContentLoaded", () => {
   const state = JSON.parse(document.getElementById("budget-state").textContent);
-  const saveState = document.querySelector(".save-state");
+  const { request, showState } = window.Codes;
 
   // ---------- Getallen ----------
 
@@ -86,24 +86,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
-
-  async function request(method, url, body) {
-    let response;
-    try {
-      response = await fetch(url, {
-        method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-      });
-    } catch {
-      throw new Error("Het dashboard is niet bereikbaar. Draait dashboard.py nog?");
-    }
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const err = new Error(data.error || `Er ging iets mis (${response.status}).`);
-      err.status = response.status;
-      throw err;
-    }
-    return data;
-  }
 
   const rows = [...document.querySelectorAll("tr[data-code]")];
   if (!rows.length) return;
@@ -189,11 +171,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let dirty = false;
   let broken = false;
 
-  function showState(kind, text) {
-    saveState.dataset.state = kind;
-    saveState.textContent = text;
-  }
-
   function scheduleSave() {
     if (broken) return;
     dirty = true;
@@ -251,72 +228,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---------- Codes ----------
 
-  document.querySelectorAll(".show-add").forEach((btn) => {
-    const section = btn.closest("section");
-    const row = section.querySelector(".add-row");
-    const form = row.querySelector("form");
-    btn.addEventListener("click", () => {
-      row.hidden = false;
-      btn.hidden = true;
-      form.elements.name.focus();
-    });
-    form.querySelector(".cancel").addEventListener("click", () => {
-      row.hidden = true;
-      btn.hidden = false;
-    });
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const error = form.querySelector(".form-error");
-      error.textContent = "";
-      try {
-        await flush();
-        await request("POST", state.codesUrl, { code: form.elements.code.value, name: form.elements.name.value });
-        location.reload();
-      } catch (err) {
-        error.textContent = err.message;
-      }
-    });
-  });
-
-  document.querySelectorAll(".rename").forEach((btn) => {
-    const tr = btn.closest("tr");
-    const label = tr.querySelector(".label");
-    btn.addEventListener("click", () => {
-      const input = document.createElement("input");
-      input.className = "rename-input";
-      input.value = label.textContent;
-      input.maxLength = 80;
-      input.setAttribute("aria-label", `Nieuwe naam voor ${tr.dataset.code}`);
-      label.hidden = true;
-      btn.hidden = true;
-      label.after(input);
-      input.focus();
-      input.select();
-      let done = false;
-      const close = () => { done = true; input.remove(); label.hidden = false; btn.hidden = false; };
-      const commit = async () => {
-        if (done) return;
-        const name = input.value.trim();
-        if (!name || name === label.textContent) { close(); return; }
-        done = true;
-        try {
-          await request("PUT", `${state.codesUrl}/${tr.dataset.code}`, { name });
-          label.textContent = name;
-          close();
-          showState("saved", `${tr.dataset.code} hernoemd`);
-        } catch (err) {
-          done = false;
-          input.setAttribute("aria-invalid", "true");
-          showState("error", err.message);
-        }
-      };
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") { e.preventDefault(); commit(); }
-        if (e.key === "Escape") { e.preventDefault(); close(); btn.focus(); }
-      });
-      input.addEventListener("blur", commit);
-    });
-  });
+  Codes.initAddForms(state.codesUrl, { before: flush });
+  Codes.initRename(state.codesUrl);
 
   // ---------- Vaststellen / ontgrendelen ----------
 
