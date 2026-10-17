@@ -46,7 +46,7 @@
     <a href="#categorieen">Categorieën</a>
     <a href="#evenementen">Evenementen</a>
     <a href="#controles">Controles
-      {% if checks_failed or report.warnings %}<span class="count">{{ checks_failed|length + report.warnings|length }}</span>{% endif %}</a>
+      {% if checks_failed or checks_soft or report.warnings %}<span class="count">{{ checks_failed|length + checks_soft|length + report.warnings|length }}</span>{% endif %}</a>
     <p class="source">
       {% if s.source == 'testdata' %}Testdata uit <code>tests/fixtures</code>
       {% else %}Moneybird, administratie {{ cfg.administration_id }}{% endif %}<br>

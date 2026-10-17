@@ -5,7 +5,6 @@ from __future__ import annotations
 import calendar
 import datetime as dt
 import os
-import urllib.error
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
@@ -13,6 +12,7 @@ from flask import abort, current_app, jsonify, request
 
 from verslag.budget import college_year, find_budget
 from verslag.config import load_config, validate_period
+from verslag.errors import VerslagError
 from verslag.events import find_events
 from verslag.moneybird import fetch_data, make_client
 from verslag.report import build_report
@@ -82,7 +82,7 @@ def load_data(s: Settings, cfg: dict) -> tuple[dt.datetime, dict]:
 
 
 def load(s: Settings):
-    """Geeft (cfg, report, opgehaald_om). Fouten komen als SystemExit (zoals in het script)."""
+    """Geeft (cfg, report, opgehaald_om). Fouten komen als VerslagError."""
     validate_period(s.start, s.end)
     cfg, label_codes = load_cfg()
     fixtures = current_app.config["FIXTURES"] if s.source == "testdata" else None
@@ -97,10 +97,8 @@ def load(s: Settings):
 def load_or_error(s: Settings):
     try:
         return load(s), None
-    except SystemExit as err:
-        return None, str(err.code)
-    except urllib.error.URLError as err:
-        return None, f"Moneybird is niet bereikbaar ({err.reason}). Controleer je internetverbinding."
+    except VerslagError as err:
+        return None, str(err)
 
 
 def clear_cache(s: Settings) -> None:

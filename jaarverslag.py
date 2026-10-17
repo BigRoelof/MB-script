@@ -22,6 +22,7 @@ from pathlib import Path
 from verslag.amounts import Row, fmt_plain
 from verslag.budget import find_budget, load_budget
 from verslag.config import load_config, validate_period
+from verslag.errors import VerslagError
 from verslag.events import find_events
 from verslag.moneybird import fetch_data, load_dotenv, make_client
 from verslag.report import build_report
@@ -53,6 +54,15 @@ def parse_args(argv=None):
 def main(argv=None):
     args = parse_args(argv)
     load_dotenv()
+    try:
+        return run(args)
+    except VerslagError as err:
+        print(f"Fout: {err}", file=sys.stderr)
+        return 1
+
+
+def run(args) -> int:
+    """Haalt de gegevens op, schrijft de tabellen en print de samenvatting. Exitcode 1 bij een afwijking."""
     validate_period(args.start, args.end)
     cfg, label_codes = load_config(args.config, args.codes)
     client = make_client(cfg, args.fixtures)

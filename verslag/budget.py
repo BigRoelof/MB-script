@@ -12,6 +12,7 @@ from pathlib import Path
 
 from .amounts import CODE_RE, Amounts, dec
 from .config import PROJECT_DIR
+from .errors import VerslagError
 
 
 BUDGET_DIR = PROJECT_DIR / "begroting"
@@ -77,20 +78,20 @@ def load_budget(path: Path, year: int | None = None) -> Budget:
                     try:
                         budget.adopted = dt.date.fromisoformat(value)
                     except ValueError:
-                        raise SystemExit(f"{path.name}: '{value}' is geen geldige datum (verwacht 2026-10-20).")
+                        raise VerslagError(f"{path.name}: '{value}' is geen geldige datum (verwacht 2026-10-20).")
         elif ln.strip():
             lines.append(ln)
     delimiter = ";" if lines and lines[0].count(";") > lines[0].count(",") else ","
     for rec in csv.DictReader(lines, delimiter=delimiter):
         code = (rec.get("code") or "").strip().upper()
         if not CODE_RE.fullmatch(code):
-            raise SystemExit(f"{path.name}: '{code}' is geen geldige code (verwacht bijvoorbeeld C101).")
+            raise VerslagError(f"{path.name}: '{code}' is geen geldige code (verwacht bijvoorbeeld C101).")
         if code in budget.amounts:
-            raise SystemExit(f"{path.name}: code {code} staat er twee keer in.")
+            raise VerslagError(f"{path.name}: code {code} staat er twee keer in.")
         try:
             amounts = Amounts(*(dec((rec.get(k) or "0").strip().replace(",", ".")) for k in ("debit", "credit")))
         except ArithmeticError:
-            raise SystemExit(f"{path.name}: code {code} heeft een ongeldig bedrag.")
+            raise VerslagError(f"{path.name}: code {code} heeft een ongeldig bedrag.")
         budget.amounts[code] = amounts
         if note := (rec.get("note") or "").strip():
             budget.notes[code] = note

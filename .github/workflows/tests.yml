@@ -1,0 +1,25 @@
+# Draait de tests bij elke pull request en push naar main. Alleen testdata (tests/fixtures), geen token nodig.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 3.11 is de oudste versie die het script ondersteunt (tomllib)
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      # Node staat al op de runner, dus de test van de bedragparser in begroting.js draait ook mee
+      - run: python -m pytest -v

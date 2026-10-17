@@ -12,6 +12,7 @@ import datetime as dt
 from pathlib import Path
 
 from .amounts import CODE_RE, NumberFormat, category_digit
+from .errors import VerslagError
 
 
 # De projectmap: hier staan config.toml, codes.csv, events.csv, .env en begroting/
@@ -24,12 +25,12 @@ def load_config(config_path: Path, codes_path: Path) -> tuple[dict, set[str]]:
     cfg["rows"] = load_codes(codes_path, [c["digit"] for c in cfg["categories"]])
     events_cfg = cfg.setdefault("events", {})
     if "groups" in events_cfg:
-        raise SystemExit("config.toml: [[events.groups]] bestaat niet meer; gebruik [events] label_codes = [...] "
+        raise VerslagError("config.toml: [[events.groups]] bestaat niet meer; gebruik [events] label_codes = [...] "
                          "(de groepering komt nu uit de organizer-kolom van events.csv).")
     label_codes = {c.upper() for c in events_cfg.get("label_codes", [])}
     unknown = sorted(c for c in label_codes if c not in cfg["rows"])
     if unknown:
-        raise SystemExit(f"config.toml [events] label_codes: onbekende code(s) {', '.join(unknown)} "
+        raise VerslagError(f"config.toml [events] label_codes: onbekende code(s) {', '.join(unknown)} "
                          "(staan niet in codes.csv).")
     cfg["number_format"] = NumberFormat(cfg["layout"].get("thousands_separator", ","),
                                         cfg["layout"].get("decimal_separator", "."))
@@ -39,17 +40,17 @@ def load_config(config_path: Path, codes_path: Path) -> tuple[dict, set[str]]:
 def validate_period(start: dt.date, end: dt.date):
     last_day = calendar.monthrange(end.year, end.month)[1]
     if start.day != 1 or end.day != last_day:
-        raise SystemExit("Moneybird-rapporten werken met hele maanden: --start moet de 1e van een maand "
+        raise VerslagError("Moneybird-rapporten werken met hele maanden: --start moet de 1e van een maand "
                          "zijn en --end de laatste dag van een maand.")
     months = (end.year - start.year) * 12 + end.month - start.month + 1
     if months < 1 or months > 12:
-        raise SystemExit("De periode moet tussen 1 en 12 maanden lang zijn.")
+        raise VerslagError("De periode moet tussen 1 en 12 maanden lang zijn.")
 
 
 def load_codes(path: Path, category_digits: list[str]) -> dict[str, str]:
     """Leest codes.csv (kolommen code,name) en controleert het bestand."""
     if not path.exists():
-        raise SystemExit(f"Codebestand niet gevonden: {path}")
+        raise VerslagError(f"Codebestand niet gevonden: {path}")
     lines = [ln for ln in path.read_text(encoding="utf-8-sig").splitlines()
              if ln.strip() and not ln.lstrip().startswith("#")]
     delimiter = ";" if lines and lines[0].count(";") > lines[0].count(",") else ","
@@ -58,17 +59,17 @@ def load_codes(path: Path, category_digits: list[str]) -> dict[str, str]:
         code = (rec.get("code") or "").strip().upper()
         name = (rec.get("name") or "").strip()
         if not CODE_RE.fullmatch(code):
-            raise SystemExit(f"{path.name}: '{code}' is geen geldige code (verwacht bijvoorbeeld C101).")
+            raise VerslagError(f"{path.name}: '{code}' is geen geldige code (verwacht bijvoorbeeld C101).")
         if not name:
-            raise SystemExit(f"{path.name}: code {code} heeft geen naam.")
+            raise VerslagError(f"{path.name}: code {code} heeft geen naam.")
         if code in codes:
-            raise SystemExit(f"{path.name}: code {code} staat er twee keer in.")
+            raise VerslagError(f"{path.name}: code {code} staat er twee keer in.")
         if category_digit(code) not in category_digits:
-            raise SystemExit(f"{path.name}: code {code} hoort bij geen categorie in config.toml "
+            raise VerslagError(f"{path.name}: code {code} hoort bij geen categorie in config.toml "
                              f"(bekend: {', '.join(category_digits)}).")
         codes[code] = name
     if not codes:
-        raise SystemExit(f"{path.name} bevat geen codes (verwacht kolommen code,name).")
+        raise VerslagError(f"{path.name} bevat geen codes (verwacht kolommen code,name).")
     return codes
 
 
@@ -101,9 +102,9 @@ def _write_codes(path: Path, lines: list[str], category_digits: list[str]) -> No
     tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
     try:
         load_codes(tmp, category_digits)       # nog steeds geldig?
-    except SystemExit as err:
+    except VerslagError as err:
         tmp.unlink()
-        raise ValueError(str(err.code))
+        raise ValueError(str(err))
     os.replace(tmp, path)
 
 

@@ -11,7 +11,7 @@ from .budget import Budget, college_year
 from .events import (DEFAULT_MAX_DAYS, Event, EventLine, EventRow, event_checks, event_lines,
                      event_warnings, load_events, organizer_groups, slug)
 from .latex import EXAMPLE_DOC, budget_table, event_table, results_table, tex
-from .results import build_results, run_checks
+from .results import build_results, completeness_checks, run_checks
 
 
 @dataclass
@@ -104,6 +104,7 @@ def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, e
         organizers.append(OrganizerTable(heading, f"{name}.tex", rows))
         event_sections.append(f"\\subsubsection*{{{tex(heading)}}}\n{{\\small\\input{{{name}}}}}")
     checks += event_checks(lines, label_codes, report_by_code)
+    checks += completeness_checks(data["documents"], data.get("unprocessed_mutations", []))
     warnings += event_warnings(lines, events, events_cfg.get("max_days", DEFAULT_MAX_DAYS))
 
     files["example.tex"] = EXAMPLE_DOC % {
