@@ -89,7 +89,9 @@ Administratie "Thalia Sandbox", id `500528313044830083`, eigenaar de penningmees
 
 ## Open punten
 
-1. **Beveiliging:** het token stond eerder in de docstring van `jaarverslag.py`; de gebruiker heeft het op 10 okt 2026 vervangen door `"..."` vóór de eerste commit (het zit dus niet in de git-geschiedenis). Het oude token in Moneybird intrekken als dat nog niet gebeurd is. Nooit tokens in getrackte bestanden zetten; alleen in `.env` (gitignored) of de omgeving.
+Het overzicht staat op het GitHub-projectbord https://github.com/users/BigRoelof/projects/2 (issues #3 en verder); hieronder de achtergrond.
+
+1. **Beveiliging:** het token stond eerder in de docstring van `jaarverslag.py`; de gebruiker heeft het op 10 okt 2026 vervangen door `"..."` vóór de eerste commit (het zit dus niet in de git-geschiedenis). Het oude token is in Moneybird ingetrokken (bevestigd 17 okt 2026). Nooit tokens in getrackte bestanden zetten; alleen in `.env` (gitignored) of de omgeving.
 2. Live API werkt (token in `.env`, sandbox): op 17 okt 2026 script live gedraaid, 10 van 10 controles in orde, alle 20 .tex-bestanden identiek aan de fixtures-uitvoer; het dashboard gebruikt standaard live als er een token is. Nog niet gedraaid tegen de echte administratie.
 3. Concrexit aanpassen (pushformaat) — werk van de gebruiker. De events.csv-export is niet meer nodig als de koppeling met thalia.nu werkt; daarvoor moet de TechniCie de OAuth-applicatie aanmaken (client_id in config.toml).
 4. Tabelopmaak afstemmen op de echte LaTeX-template.
