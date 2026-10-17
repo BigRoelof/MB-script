@@ -106,7 +106,7 @@ Bij een `AFWIJKING` eindigt het script met exitcode 1 (de tabellen worden wel ge
   ```sh
   .venv/bin/python -m pytest
   ```
-  Ze draaien op de testdata en schrijven alleen in tijdelijke mappen (niet in `begroting/` of `codes.csv`). Op GitHub draaien ze automatisch bij elke push en pull request (Python 3.11 en 3.13).
+  Ze draaien op de testdata en schrijven alleen in tijdelijke mappen (niet in `begroting/` of `codes.csv`). Op GitHub draaien ze automatisch bij elke pull request en push naar main (Python 3.11 en 3.13).
 
 ## Beperkingen
 

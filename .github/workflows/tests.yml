@@ -1,8 +1,9 @@
-# Draait de tests bij elke push en pull request. Alleen testdata (tests/fixtures), geen token nodig.
+# Draait de tests bij elke pull request en push naar main. Alleen testdata (tests/fixtures), geen token nodig.
 name: tests
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 jobs:
