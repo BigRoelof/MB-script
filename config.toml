@@ -53,20 +53,18 @@ file = "incidental"
 # codes komen op de waarschuwingenlijst. Andere codes (bijv. C208, dat is één evenement)
 # hoeven geen label, maar een label telt daar wel mee.
 label_codes = [
-    "C101", "C102", "C103",   # BorrelCie: drinks, snacks, decoration
+    "C101",                   # Borrel drinks
+    "C102",                   # Borrel snacks
+    "C103",                   # Borrel decoration
     "C104",                   # Alumni borrels
     "C106",                   # Other borrels
     "C201",                   # Events committee
     "C202",                   # Turing committee
     "C204",                   # First year committee
     "C211",                   # Wine tasting
-    "C212",                   # Lunch lectures
-    "C214",                   # Introduction week
-    "C215",                   # Societies
+    "C212",                   # Lunch lectures costs
     "C216",                   # Other events
     "C217",                   # Lustrum
-    "C303",                   # Committee clothing
-    "C307",                   # Committee activity
 ]
 
 # Waarschuwing als de boekingsdatum meer dan zoveel dagen van de evenementdatum afligt.
