@@ -82,3 +82,13 @@ def test_zelfde_bestandsnaam_krijgt_een_nummer(config, data):
     assert files["Borrel-Cie"] == "events_borrelcie2.tex"
     assert "\\input{events_borrelcie2}" in r.files["example.tex"]
     assert any("events_borrelcie2.tex" in w for w in r.warnings)
+
+
+def test_getalnotatie_per_config_zonder_globale_toestand(config, data):
+    from verslag.amounts import NumberFormat
+    cfg, label_codes = config
+    dutch = report(({**cfg, "number_format": NumberFormat(".", ",")}, label_codes), data)
+    default = report(config, data)
+    assert "6.822,18" in dutch.files["results_overview.tex"]
+    assert "6,822.18" in default.files["results_overview.tex"]   # niet beïnvloed door de vorige
+    assert "6,822.18" in " ".join(c[2] for c in dutch.checks)     # meldingen altijd standaard

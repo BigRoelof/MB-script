@@ -6,7 +6,7 @@ import datetime as dt
 from dataclasses import dataclass
 from pathlib import Path
 
-from .amounts import Row, total
+from .amounts import DEFAULT_FORMAT, Row, total
 from .budget import Budget, college_year
 from .events import (DEFAULT_MAX_DAYS, Event, EventLine, EventRow, event_checks, event_lines,
                      event_warnings, load_events, organizer_groups, slug)
@@ -56,6 +56,7 @@ def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, e
                            budget.amounts if budget else {}, warnings)
     files: dict[str, str] = {}
     with_budget = budget is not None
+    nf = cfg.get("number_format", DEFAULT_FORMAT)   # getalnotatie van de LaTeX-tabellen
 
     overview_rows = []
     sections = []
@@ -63,16 +64,16 @@ def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, e
     budget_files = {}
     for c in cfg["categories"]:
         rows = tables[c["digit"]]
-        files[f"results_{c['file']}.tex"] = results_table(rows, with_budget=with_budget)
+        files[f"results_{c['file']}.tex"] = results_table(rows, with_budget=with_budget, number_format=nf)
         overview_rows.append(total(rows, c["name"]))
         sections.append(f"\\subsubsection*{{{tex(c['name'])}}}\n{{\\small\\input{{results_{c['file']}}}}}")
         if budget is not None:
-            budget_files[f"budget_{c['file']}.tex"] = budget_table(rows, budget.notes)
+            budget_files[f"budget_{c['file']}.tex"] = budget_table(rows, budget.notes, number_format=nf)
             budget_sections.append(f"\\subsubsection*{{{tex(c['name'])}}}\n{{\\small\\input{{budget_{c['file']}}}}}")
-    files = {"results_overview.tex": results_table(overview_rows, with_budget=with_budget), **files}
+    files = {"results_overview.tex": results_table(overview_rows, with_budget=with_budget, number_format=nf), **files}
     if budget is not None:
         overview_budget = [Row(r.code, r.label, budget=r.budget) for r in overview_rows]
-        files["budget_overview.tex"] = budget_table(overview_budget, skip_empty=False)
+        files["budget_overview.tex"] = budget_table(overview_budget, skip_empty=False, number_format=nf)
         files.update(budget_files)
 
     checks = run_checks(tables, overview_rows, data["revenue"], data["expenses"], data["pl"])
@@ -99,7 +100,7 @@ def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, e
         if n > 1:
             warnings.append(f"Evenementen: '{heading}' geeft dezelfde bestandsnaam als een andere organizer; "
                             f"de tabel heet daarom {name}.tex. Geef een andere naam in [events.organizers].")
-        files[f"{name}.tex"] = event_table(rows)
+        files[f"{name}.tex"] = event_table(rows, number_format=nf)
         organizers.append(OrganizerTable(heading, f"{name}.tex", rows))
         event_sections.append(f"\\subsubsection*{{{tex(heading)}}}\n{{\\small\\input{{{name}}}}}")
     checks += event_checks(lines, label_codes, report_by_code)

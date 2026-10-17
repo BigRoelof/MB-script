@@ -11,7 +11,7 @@ import tomllib
 import datetime as dt
 from pathlib import Path
 
-from .amounts import CODE_RE, NUMBER_FMT, category_digit
+from .amounts import CODE_RE, NumberFormat, category_digit
 
 
 # De projectmap: hier staan config.toml, codes.csv, events.csv, .env en begroting/
@@ -31,8 +31,8 @@ def load_config(config_path: Path, codes_path: Path) -> tuple[dict, set[str]]:
     if unknown:
         raise SystemExit(f"config.toml [events] label_codes: onbekende code(s) {', '.join(unknown)} "
                          "(staan niet in codes.csv).")
-    NUMBER_FMT["thousands"] = cfg["layout"].get("thousands_separator", ",")
-    NUMBER_FMT["decimal"] = cfg["layout"].get("decimal_separator", ".")
+    cfg["number_format"] = NumberFormat(cfg["layout"].get("thousands_separator", ","),
+                                        cfg["layout"].get("decimal_separator", "."))
     return cfg, label_codes
 
 

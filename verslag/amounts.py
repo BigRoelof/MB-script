@@ -13,7 +13,14 @@ CODE_RE = re.compile(r"^\s*(C\d{3})\b", re.IGNORECASE)
 ZERO = Decimal("0")
 TOLERANCE = Decimal("0.01")
 # Getalnotatie in de uitvoer; load_config zet dit uit [layout] in config.toml
-NUMBER_FMT = {"thousands": ",", "decimal": "."}
+@dataclass(frozen=True)
+class NumberFormat:
+    """Getalnotatie in de LaTeX-tabellen ([layout] in config.toml). Meldingen gebruiken altijd de standaard."""
+    thousands: str = ","
+    decimal: str = "."
+
+
+DEFAULT_FORMAT = NumberFormat()
 
 
 def category_digit(code: str) -> str:
@@ -63,8 +70,8 @@ def total(rows: list[Row], label="TOTAL") -> Row:
     return t
 
 
-def fmt_plain(value: Decimal) -> str:
+def fmt_plain(value: Decimal, number_format: NumberFormat = DEFAULT_FORMAT) -> str:
     q = value.quantize(Decimal("0.01"))
     s = f"{abs(q):,.2f}"
-    s = s.replace(",", "\0").replace(".", NUMBER_FMT["decimal"]).replace("\0", NUMBER_FMT["thousands"])
+    s = s.replace(",", "\0").replace(".", number_format.decimal).replace("\0", number_format.thousands)
     return ("-" if q < 0 else "") + s

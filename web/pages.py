@@ -29,7 +29,6 @@ def organizer_view(report: Report) -> list[dict]:
     for org in report.organizers:
         out.append({
             "heading": org.heading,
-            "file": org.file,
             "total": total([Row("", "", actual=r.amounts) for r in org.rows]).actual,
             "events": [{"row": r,
                         "lines": lines_by_event.get(r.event_id, [])} for r in org.rows],
