@@ -1,0 +1,43 @@
+{# Uitklapmenu linksboven, op elke pagina hetzelfde. Verwacht `s` (Settings) en `page`
+   ("dashboard", "begroting" of "codes"); `fetched_at` is optioneel. #}
+<details class="menu">
+  <summary aria-label="Menu">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4h11M2.5 8h11M2.5 12h11"/></svg>
+  </summary>
+  <div class="menu-panel">
+    <section>
+      <h2>Periode en bron</h2>
+      <form class="period" method="get" action="{{ url_for(request.endpoint) }}">
+        <label>Van <input type="month" name="van" value="{{ s.start.strftime('%Y-%m') }}" required></label>
+        <label>t/m <input type="month" name="tm" value="{{ s.end.strftime('%Y-%m') }}" required></label>
+        <label>Bron
+          <select name="bron">
+            <option value="live" {{ 'selected' if s.source == 'live' }} {{ '' if has_token else 'disabled' }}>Moneybird{{ '' if has_token else ' (geen token)' }}</option>
+            <option value="testdata" {{ 'selected' if s.source == 'testdata' }}>Testdata</option>
+          </select>
+        </label>
+        {% if not s.show_budget %}<input type="hidden" name="begroting" value="0">{% endif %}
+        {% if request.args.jaar %}<input type="hidden" name="jaar" value="{{ request.args.jaar }}">{% endif %}
+        <button type="submit" class="primary">Toon</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Gegevens</h2>
+      <form method="post" action="{{ url_for('pages.refresh', **s.query()) }}" class="refresh">
+        <input type="hidden" name="next" value="{{ request.full_path }}">
+        <button class="ghost" type="submit">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 2.5v3h-3"/></svg>Opnieuw ophalen</button>
+        <span class="note">{% if fetched_at %}Opgehaald om {{ fetched_at.strftime('%H:%M') }}{% endif %}
+          uit {{ 'de testdata' if s.source == 'testdata' else 'Moneybird' }}</span>
+      </form>
+    </section>
+
+    <nav aria-label="Pagina's">
+      <h2>Pagina's</h2>
+      <a href="{{ url_for('pages.index', **s.query()) }}" {% if page == 'dashboard' %}aria-current="page"{% endif %}>Dashboard</a>
+      <a href="{{ url_for('begroting.budget_page', **s.query()) }}" {% if page == 'begroting' %}aria-current="page"{% endif %}>Begroting</a>
+      <a href="{{ url_for('codes.codes_page', **s.query()) }}" {% if page == 'codes' %}aria-current="page"{% endif %}>Codes</a>
+    </nav>
+  </div>
+</details>

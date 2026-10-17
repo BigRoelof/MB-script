@@ -11,6 +11,7 @@
 <body class="budget-page">
 {% set year_query = {"van": year ~ "-09", "tm": (year + 1) ~ "-08", "bron": s.source} %}
 <header class="topbar">
+  {% set page = "begroting" %}{% include "_menu.html" %}
   <a class="wordmark" href="{{ url_for('pages.index', **s.query()) }}">Thalia<span>Begroting</span></a>
 
   <nav class="presets years" aria-label="Collegejaar">
@@ -22,7 +23,6 @@
 
   <div class="actions">
     <span class="save-state" role="status" aria-live="polite" data-state="idle"></span>
-    <a class="ghost" href="{{ url_for('pages.index', **year_query) }}">Naar het dashboard</a>
   </div>
 </header>
 

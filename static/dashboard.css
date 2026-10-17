@@ -139,14 +139,45 @@ button:hover, .ghost:hover { background: var(--wash); }
 .primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
 
-.presets { display: flex; gap: 0.25rem; font-size: 0.8125rem; }
-.presets a {
-  padding: 0.2rem 0.55rem; border-radius: 999px; color: var(--ink-2); text-decoration: none;
-}
-.presets a:hover { background: var(--wash); color: var(--ink); }
-.presets a[aria-current] { background: var(--ink); color: var(--page); }
-
 .actions { display: flex; gap: 0.5rem; align-items: center; margin-left: auto; }
+
+/* ---------- Uitklapmenu (linksboven) ---------- */
+
+.menu { position: relative; }
+.menu > summary {
+  display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem;
+  list-style: none; cursor: pointer; border-radius: 6px; color: var(--ink);
+  border: 1px solid var(--rule-strong); background: var(--surface);
+}
+.menu > summary::-webkit-details-marker { display: none; }
+.menu > summary svg { width: 1.1rem; height: 1.1rem; }
+.menu > summary:hover { background: var(--wash); }
+.menu[open] > summary { border-color: var(--accent); background: var(--wash); }
+
+.menu-panel {
+  position: absolute; top: calc(100% + 0.5rem); left: 0; z-index: 30;
+  width: min(21rem, calc(100vw - 2rem)); padding: 1rem 1.1rem;
+  display: grid; gap: 1rem;
+  background: var(--surface); border: 1px solid var(--rule-strong); border-radius: 10px;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.18);
+}
+.menu-panel > * + * { border-top: 1px solid var(--rule); padding-top: 1rem; }
+.menu-panel h2 {
+  margin: 0 0 0.6rem; font-size: 0.75rem; font-weight: 650; font-stretch: 100%;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+}
+.menu-panel .period { display: grid; gap: 0.5rem; }
+.menu-panel .period label { display: grid; grid-template-columns: 3.2rem 1fr; align-items: center; gap: 0.5rem; }
+.menu-panel .period input, .menu-panel .period select { width: 100%; }
+.menu-panel .period button { justify-self: end; margin-top: 0.25rem; }
+.menu-panel .refresh { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.75rem; }
+.menu-panel .refresh .note { margin: 0; }
+.menu-panel nav a {
+  display: block; padding: 0.35rem 0.6rem; margin: 0 -0.6rem; border-radius: 6px;
+  color: var(--ink-2); text-decoration: none;
+}
+.menu-panel nav a:hover { background: var(--wash); color: var(--ink); }
+.menu-panel nav a[aria-current] { color: var(--ink); font-weight: 620; box-shadow: inset 2px 0 0 var(--accent); border-radius: 0 6px 6px 0; }
 .actions form { margin: 0; }
 
 /* ---------- Opbouw ---------- */
@@ -560,7 +591,7 @@ details .lines { margin-top: 0.75rem; }
   .budget-grid { table-layout: auto; min-width: 44rem; }
   .layout { grid-template-columns: minmax(0, 1fr); }
   .rail { display: none; }
-  .topbar { position: static; }
+  .topbar { position: relative; }   /* niet vastgeplakt, wel boven de pagina (voor het menu) */
   .events { table-layout: auto; }
   .money { display: block; overflow-x: auto; }
   .checks li { grid-template-columns: 6.5rem 1fr; }

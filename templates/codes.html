@@ -10,11 +10,10 @@
 </head>
 <body class="codes-page">
 <header class="topbar">
+  {% set page = "codes" %}{% include "_menu.html" %}
   <a class="wordmark" href="{{ url_for('pages.index', **s.query()) }}">Thalia<span>Codes</span></a>
   <div class="actions">
     <span class="save-state" role="status" aria-live="polite"></span>
-    <a class="ghost" href="{{ url_for('begroting.budget_page', **s.query()) }}">Begroting</a>
-    <a class="ghost" href="{{ url_for('pages.index', **s.query()) }}">Naar het dashboard</a>
   </div>
 </header>
 

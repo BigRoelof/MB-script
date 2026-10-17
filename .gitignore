@@ -12,3 +12,5 @@ __pycache__/
 
 # Python-omgeving voor het dashboard
 .venv/
+
+*.tex

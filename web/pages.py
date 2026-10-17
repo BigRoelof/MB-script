@@ -6,7 +6,7 @@ import datetime as dt
 import io
 import zipfile
 
-from flask import Blueprint, Response, abort, current_app, redirect, render_template, url_for
+from flask import Blueprint, Response, abort, current_app, redirect, render_template, request, url_for
 
 from verslag.amounts import Row, total
 from verslag.budget import budget_path, college_year
@@ -37,23 +37,11 @@ def organizer_view(report: Report) -> list[dict]:
     return out
 
 
-def presets(s: Settings) -> list[dict]:
-    year = college_year(s.start)
-    options = [
-        (f"{year}–{year + 1}", dt.date(year, 9, 1), dt.date(year + 1, 8, 31)),
-        (f"Halfjaar {year}–{year + 1}", dt.date(year, 9, 1), dt.date(year + 1, 1, 31)),
-        (f"{year - 1}–{year}", dt.date(year - 1, 9, 1), dt.date(year, 8, 31)),
-    ]
-    return [{"label": label, "active": (start, end) == (s.start, s.end),
-             "url": url_for("pages.index", **s.query(van=f"{start:%Y-%m}", tm=f"{end:%Y-%m}"))}
-            for label, start, end in options]
-
-
 @bp.get("/")
 def index():
     s = read_settings()
     loaded, error = load_or_error(s)
-    context = {"s": s, "error": error, "has_token": has_token(), "presets": presets(s)}
+    context = {"s": s, "error": error, "has_token": has_token()}
     if loaded:
         cfg, report, fetched_at = loaded
         checks_ok = sum(1 for c in report.checks if c[1] == "OK")
@@ -83,7 +71,11 @@ def index():
 def refresh():
     s = read_settings()
     clear_cache(s)
-    return redirect(url_for("pages.index", **s.query()))
+    # Terug naar de pagina waar het menu werd gebruikt (alleen een pad op deze site)
+    target = request.form.get("next", "")
+    if not target.startswith("/") or target.startswith("//"):
+        target = url_for("pages.index", **s.query())
+    return redirect(target)
 
 
 def loaded_report():
