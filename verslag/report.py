@@ -15,6 +15,13 @@ from .results import build_results, run_checks
 
 
 @dataclass
+class OrganizerTable:
+    heading: str
+    file: str                           # events_<slug>.tex, uniek binnen het verslag
+    rows: list[EventRow]
+
+
+@dataclass
 class Report:
     start: dt.date
     end: dt.date
@@ -24,7 +31,7 @@ class Report:
     lines: list[EventLine]
     events: dict[str, Event]
     events_path: Path | None            # None = events.csv niet gevonden
-    organizers: list[tuple[str, list[EventRow]]]
+    organizers: list[OrganizerTable]
     budget: Budget | None
     checks: list[tuple[str, str, str]]
     warnings: list[str]
@@ -79,11 +86,21 @@ def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, e
         warnings.append(f"Evenementenlijst {events_path} niet gevonden: de evenementtabellen tonen alleen "
                         "nummers en de labels worden niet gecontroleerd.")
     events_cfg = cfg.get("events", {})
-    organizers = organizer_groups(lines, events, start, end, events_cfg.get("organizers", {}))
+    organizers = []
     event_sections = []
-    for heading, rows in organizers:
-        name = f"events_{slug(heading)}"
+    for heading, rows in organizer_groups(lines, events, start, end, events_cfg.get("organizers", {})):
+        # Verschillende namen kunnen dezelfde bestandsnaam geven ("TechniCie" en "Technicie"):
+        # dan krijgt de tweede een nummer, zodat er geen tabel stilletjes overschreven wordt
+        base = name = f"events_{slug(heading)}"
+        n = 1
+        while f"{name}.tex" in files:
+            n += 1
+            name = f"{base}{n}"
+        if n > 1:
+            warnings.append(f"Evenementen: '{heading}' geeft dezelfde bestandsnaam als een andere organizer; "
+                            f"de tabel heet daarom {name}.tex. Geef een andere naam in [events.organizers].")
         files[f"{name}.tex"] = event_table(rows)
+        organizers.append(OrganizerTable(heading, f"{name}.tex", rows))
         event_sections.append(f"\\subsubsection*{{{tex(heading)}}}\n{{\\small\\input{{{name}}}}}")
     checks += event_checks(lines, label_codes, report_by_code)
     warnings += event_warnings(lines, events, events_cfg.get("max_days", DEFAULT_MAX_DAYS))

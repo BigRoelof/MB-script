@@ -165,7 +165,8 @@ def organizer_groups(lines: list[EventLine], events: dict[str, Event], start: dt
 
     Een evenement komt erin als het in de periode valt of als er in de periode op geboekt is.
     Volgorde van de organizers: zoals ze voor het eerst in de evenementenlijst staan.
-    Labels die niet in de lijst staan komen in een aparte tabel onderaan.
+    Er wordt gegroepeerd op de nette naam uit [events.organizers]: twee organizers met dezelfde
+    naam komen in één tabel. Labels die niet in de lijst staan komen in een aparte tabel onderaan.
     """
     per_event: dict[str, Amounts] = {}
     for l in lines:
@@ -176,13 +177,13 @@ def organizer_groups(lines: list[EventLine], events: dict[str, Event], start: dt
     by_organizer: dict[str, list[str]] = {}
     for event_id, e in events.items():
         if event_id in per_event or start <= e.date <= end:
-            by_organizer.setdefault(e.organizer, []).append(event_id)
+            by_organizer.setdefault(organizer_names.get(e.organizer, e.organizer), []).append(event_id)
 
     result = []
-    for organizer, ids in by_organizer.items():
+    for heading, ids in by_organizer.items():
         ids.sort(key=lambda i: (events[i].date, int(i)))
         rows = [EventRow(i, events[i].name, events[i].date, per_event.get(i, Amounts())) for i in ids]
-        result.append((organizer_names.get(organizer, organizer), rows))
+        result.append((heading, rows))
 
     unknown = sorted((i for i in per_event if i not in events), key=int)
     if unknown:

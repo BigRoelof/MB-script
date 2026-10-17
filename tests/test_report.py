@@ -54,3 +54,31 @@ def test_waarschuwing_bij_conceptbegroting(config, data):
     assert any("concept" in w for w in concept.warnings)
     vastgesteld = report(config, data, Budget(2026, status="vastgesteld"))
     assert not any("concept" in w for w in vastgesteld.warnings)
+
+
+def with_organizers(config, names):
+    cfg, label_codes = config
+    return {**cfg, "events": {**cfg["events"], "organizers": names}}, label_codes
+
+
+def test_organizers_met_dezelfde_naam_worden_samengevoegd(config, data):
+    names = {**config[0]["events"]["organizers"], "EVC": "BorrelCie"}
+    r = report(with_organizers(config, names), data)
+    headings = [o.heading for o in r.organizers]
+    assert headings.count("BorrelCie") == 1
+    assert "Events Committee" not in headings
+    merged = next(o for o in r.organizers if o.heading == "BorrelCie")
+    assert len(merged.rows) == 4 + 3          # vier van CAD, drie van EVC
+    assert [row.date for row in merged.rows] == sorted(row.date for row in merged.rows)
+    assert "events_eventscommittee.tex" not in r.files
+    assert r.files["example.tex"].count("\\input{events_borrelcie}") == 1
+
+
+def test_zelfde_bestandsnaam_krijgt_een_nummer(config, data):
+    names = {**config[0]["events"]["organizers"], "EVC": "Borrel-Cie"}   # slug: borrelcie
+    r = report(with_organizers(config, names), data)
+    files = {o.heading: o.file for o in r.organizers}
+    assert files["BorrelCie"] == "events_borrelcie.tex"
+    assert files["Borrel-Cie"] == "events_borrelcie2.tex"
+    assert "\\input{events_borrelcie2}" in r.files["example.tex"]
+    assert any("events_borrelcie2.tex" in w for w in r.warnings)

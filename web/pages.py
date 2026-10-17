@@ -10,7 +10,7 @@ from flask import Blueprint, Response, abort, current_app, redirect, render_temp
 
 from verslag.amounts import Row, total
 from verslag.budget import budget_path, college_year
-from verslag.events import EventLine, slug
+from verslag.events import EventLine
 from verslag.report import Report
 
 from .common import Settings, clear_cache, has_token, load_or_error, read_settings
@@ -26,13 +26,13 @@ def organizer_view(report: Report) -> list[dict]:
     for lines in lines_by_event.values():
         lines.sort(key=lambda l: (l.date or dt.date.min, l.reference))
     out = []
-    for heading, rows in report.organizers:
+    for org in report.organizers:
         out.append({
-            "heading": heading,
-            "file": f"events_{slug(heading)}.tex",
-            "total": total([Row("", "", actual=r.amounts) for r in rows]).actual,
+            "heading": org.heading,
+            "file": org.file,
+            "total": total([Row("", "", actual=r.amounts) for r in org.rows]).actual,
             "events": [{"row": r,
-                        "lines": lines_by_event.get(r.event_id, [])} for r in rows],
+                        "lines": lines_by_event.get(r.event_id, [])} for r in org.rows],
         })
     return out
 
@@ -52,7 +52,7 @@ def index():
                         for c, o in zip(report.categories, report.overview_rows)],
             organizers=organizer_view(report),
             events_total=total([Row("", "", actual=r.amounts)
-                                for _, rows in report.organizers for r in rows]).actual,
+                                for org in report.organizers for r in org.rows]).actual,
             unlabeled=[l for l in report.lines if not l.event_id],
             budget=report.budget,
             budget_year=year,
