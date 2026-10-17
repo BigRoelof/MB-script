@@ -20,7 +20,7 @@ cp .env.example .env && chmod 600 .env   # token invullen; alleen nodig voor liv
 .venv/bin/python dashboard.py     # open http://127.0.0.1:5000
 ```
 
-Zonder token kies je **Testdata** als bron (`tests/fixtures`, alleen collegejaar 2026-2027). Opgehaalde gegevens blijven in het geheugen tot je op **Opnieuw ophalen** klikt. Wijzigingen in `config.toml`, `codes.csv` en `events.csv` zie je na herladen van de pagina. Het dashboard is alleen bereikbaar vanaf je eigen computer.
+Periode en bron kies je in het **menu linksboven**; daar staan ook **Opnieuw ophalen** en de links naar Begroting en Codes. Zonder token kies je **Testdata** als bron (`tests/fixtures`, alleen collegejaar 2026-2027). Opgehaalde gegevens blijven in het geheugen tot je op **Opnieuw ophalen** klikt. Wijzigingen in `config.toml`, `codes.csv` en `events.csv` zie je na herladen van de pagina. Het dashboard is alleen bereikbaar vanaf je eigen computer.
 
 ## Hoe de groepering werkt
 
@@ -30,7 +30,7 @@ Elk project in Moneybird heet `CODE - omschrijving`, bijvoorbeeld `C106 - iCIS b
 - De **hele code** bepaalt de regel (C106 = Other borrels).
 - Alle projecten met dezelfde code worden opgeteld.
 
-Welke code bij welke regelnaam hoort, staat in **`codes.csv`** (kolommen `code,name`). Bewerken kan op de pagina **Codes** in het dashboard (`/codes`, link bij Per categorie): daar zie je per code de projecten in Moneybird en wanneer er voor het laatst op geboekt is ("actief" = in het huidige collegejaar), en kun je codes toevoegen, hernoemen en verwijderen. In de kolom **Label verplicht** vink je aan bij welke codes elke boekregel een evenementlabel `[E…]` moet hebben (dat past `label_codes` in `config.toml` aan). Verwijderen kan alleen als de code nergens gebruikt wordt (geen project in Moneybird, niet begroot, geen labelcode). Met de hand in Excel of een teksteditor mag ook. Het script weigert te draaien bij dubbele of ongeldige codes of een code waarvan de categorie niet in `config.toml` staat. De categorieën (cijfer, naam, bestandsnaam), het administratie-id en de opmaak staan in `config.toml`. Een ander codebestand kies je met `--codes`.
+Welke code bij welke regelnaam hoort, staat in **`codes.csv`** (kolommen `code,name`). Bewerken kan op de pagina **Codes** in het dashboard (`/codes`, via het menu linksboven): daar zie je per code de projecten in Moneybird en of er in de gekozen periode op geboekt is ("actief"), en kun je codes toevoegen, hernoemen en verwijderen. In de kolom **Label verplicht** vink je aan bij welke codes elke boekregel een evenementlabel `[E…]` moet hebben (dat past `label_codes` in `config.toml` aan). Verwijderen kan alleen als de code nergens gebruikt wordt (geen project in Moneybird, niet begroot, geen labelcode). Met de hand in Excel of een teksteditor mag ook. Het script weigert te draaien bij dubbele of ongeldige codes of een code waarvan de categorie niet in `config.toml` staat. De categorieën (cijfer, naam, bestandsnaam), het administratie-id en de opmaak staan in `config.toml`. Een ander codebestand kies je met `--codes`.
 
 **Debit** = kosten, **credit** = opbrengsten, allebei exclusief btw, zoals Moneybird ze in de winst-en-verliesrekening boekt. **Result** = credit − debit.
 
@@ -44,7 +44,7 @@ Op `/begroting` in het dashboard maak je per collegejaar de begroting, per C-cod
 
 - In een bedragcel mag je rekenen (`4*375`, `12*(15+3,50)`); `1.500` en `1.234,56` worden begrepen. <kbd>Enter</kbd> of de pijltjes gaan naar de volgende of vorige regel.
 - Een nieuw jaar begin je leeg, als kopie van de begroting van vorig jaar, of met de realisatie van vorig jaar (afgerond op hele euro's).
-- Codes toevoegen of hernoemen kan vanuit de editor; dat past `codes.csv` aan (commentaar en volgorde blijven staan). Verwijderen doe je met de hand in `codes.csv`.
+- Codes toevoegen of hernoemen kan vanuit de editor; dat past `codes.csv` aan (commentaar en volgorde blijven staan). Verwijderen kan op de pagina Codes.
 - **Vaststellen** (met de datum van de ALV) vergrendelt de begroting; **Ontgrendelen** maakt er weer een concept van. Een conceptbegroting geeft een waarschuwing in het verslag.
 
 Op de startpagina staat de realisatie naast de begroting van het collegejaar waarin de gekozen periode begint. Bij een halfjaar is dat de realisatie tot nu toe tegenover de **hele** jaarbegroting.
