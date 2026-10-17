@@ -7,6 +7,7 @@ import pytest
 
 from verslag.amounts import Amounts
 from verslag.budget import Budget, budget_path, budget_years, college_year, find_budget, load_budget, save_budget
+from verslag.errors import VerslagError
 
 
 def test_opslaan_en_teruglezen(tmp_path):
@@ -40,7 +41,7 @@ def test_puntkomma_en_komma_uit_excel(tmp_path):
 def test_ongeldige_bestanden(tmp_path, content):
     path = tmp_path / "b.csv"
     path.write_text(content)
-    with pytest.raises(SystemExit):
+    with pytest.raises(VerslagError):
         load_budget(path)
 
 

@@ -100,16 +100,16 @@ Bij een `AFWIJKING` eindigt het script met exitcode 1 (de tabellen worden wel ge
 
 ## Code en tests
 
-- `jaarverslag.py` is het commando; het rekenwerk staat in het pakket **`verslag/`** (één module per onderwerp: `moneybird`, `config`, `budget`, `results`, `events`, `latex`, `report`; zie de docstring in `verslag/__init__.py`).
+- `jaarverslag.py` is het commando; het rekenwerk staat in het pakket **`verslag/`** (één module per onderwerp: `errors`, `moneybird`, `config`, `budget`, `results`, `events`, `latex`, `report`; zie de docstring in `verslag/__init__.py`).
 - `dashboard.py` start de webapp; de code daarvan staat in **`web/`** (startpagina en downloads in `pages.py`, de begroting in `budget.py`). Templates en stijlen staan in `templates/` en `static/`.
 - Tests (eenmalig `.venv/bin/pip install -r requirements-dev.txt`):
   ```sh
   .venv/bin/python -m pytest
   ```
-  Ze draaien op de testdata en schrijven alleen in tijdelijke mappen (niet in `begroting/` of `codes.csv`).
+  Ze draaien op de testdata en schrijven alleen in tijdelijke mappen (niet in `begroting/` of `codes.csv`). Op GitHub draaien ze automatisch bij elke push en pull request (Python 3.11 en 3.13).
 
 ## Beperkingen
 
 - Moneybird-rapporten werken met **hele maanden**, maximaal 12. Een peildatum als 28 januari kan niet; gebruik 31 januari.
-- De resultaten komen uit de Moneybird-rapporten. **Conceptfacturen tellen daar niet mee.** Pas na versturen staan ze erin.
+- De resultaten komen uit de Moneybird-rapporten. **Conceptfacturen tellen daar niet mee.** Pas na versturen staan ze erin; de controle "geen concepten" meldt ze.
 - Merchandisevoorraad en de schattingen bij partners (B.2) komen niet uit Moneybird en blijven handwerk.

@@ -9,6 +9,7 @@ from flask import Blueprint, current_app, jsonify, render_template
 from verslag.amounts import CODE_RE, category_digit, dec
 from verslag.budget import budget_path, budget_years, load_budget
 from verslag.config import delete_code, edit_codes, set_label_code
+from verslag.errors import VerslagError
 
 from .common import api_error, has_token, json_body, load_cfg, load_data, read_settings
 
@@ -37,8 +38,8 @@ def code_usage(cfg: dict, s) -> tuple[dict, set, dict, str | None]:
                 projects.setdefault(code, []).append({"name": p["name"], "archived": p.get("state") == "archived"})
         booked = {code_of[r["project_id"]] for r in data["revenue"] + data["expenses"]
                   if r.get("project_id") in code_of and dec(r["amount"]) != 0}
-    except SystemExit as err:
-        error = str(err.code)
+    except VerslagError as err:
+        error = str(err)
     budgets: dict[str, list[str]] = {}
     directory = current_app.config["BUDGET_DIR"]
     for year in budget_years(directory):
@@ -59,8 +60,8 @@ def codes_page():
     context = {"s": s, "has_token": has_token()}
     try:
         cfg, label_codes = load_cfg()
-    except SystemExit as err:
-        context["error"] = str(err.code)
+    except VerslagError as err:
+        context["error"] = str(err)
         return render_template("codes.html", **context), 500
     projects, booked, budgets, projects_error = code_usage(cfg, s)
     categories = []

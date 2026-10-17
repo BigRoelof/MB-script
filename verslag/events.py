@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .amounts import CODE_RE, TOLERANCE, ZERO, Amounts, dec, fmt_plain
 from .config import PROJECT_DIR
+from .errors import VerslagError
 
 
 # Evenementlabel in de omschrijving van een boekregel: [E1234], met het event-id uit concrexit
@@ -48,13 +49,13 @@ def load_events(path: Path) -> dict[str, Event]:
         event_id = (rec.get("id") or "").strip().upper().removeprefix("E")
         name = (rec.get("name") or "").strip()
         if not event_id.isdigit():
-            raise SystemExit(f"{path.name}: '{rec.get('id')}' is geen geldig event-id (verwacht een getal).")
+            raise VerslagError(f"{path.name}: '{rec.get('id')}' is geen geldig event-id (verwacht een getal).")
         if event_id in events:
-            raise SystemExit(f"{path.name}: event {event_id} staat er twee keer in.")
+            raise VerslagError(f"{path.name}: event {event_id} staat er twee keer in.")
         try:
             date = parse_date(rec.get("date") or "")
         except ValueError:
-            raise SystemExit(f"{path.name}: event {event_id} heeft geen geldige datum ('{rec.get('date')}').")
+            raise VerslagError(f"{path.name}: event {event_id} heeft geen geldige datum ('{rec.get('date')}').")
         organizer = (rec.get("organizer") or "").strip() or "Other"
         events[event_id] = Event(name or f"Event {event_id}", date, organizer)
     return events

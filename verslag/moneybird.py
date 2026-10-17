@@ -13,11 +13,15 @@ import urllib.request
 from pathlib import Path
 
 from .config import PROJECT_DIR
+from .errors import VerslagError
 
 
 API_BASE = "https://moneybird.com/api/v2"
 # financial_mutations geeft zonder paginering hooguit zoveel mutaties terug
 MUTATIONS_LIMIT = 100
+# Zo vaak opnieuw proberen na een rate limit, en na een serverfout of netwerkfout
+MAX_RATE_LIMITED = 5
+MAX_RETRIES = 3
 
 
 class MoneybirdClient:
@@ -28,9 +32,13 @@ class MoneybirdClient:
         self.base = f"{API_BASE}/{administration_id}"
 
     def get(self, path: str, params: dict | None = None):
+        """Eén GET-verzoek. Bij een rate limit wacht hij zo lang als Moneybird vraagt; bij een
+        serverfout (5xx), time-out of verbroken verbinding probeert hij het nog een paar keer.
+        Dat kan veilig: een GET verandert niets in Moneybird."""
         query = urllib.parse.urlencode(params or {})
         url = f"{self.base}/{path}.json" + (f"?{query}" if query else "")
-        for attempt in range(6):
+        rate_limited = failed = 0
+        while True:
             req = urllib.request.Request(url, headers={
                 "Authorization": f"Bearer {self.token}",
                 "Accept": "application/json",
@@ -39,14 +47,33 @@ class MoneybirdClient:
                 with urllib.request.urlopen(req, timeout=60) as resp:
                     return json.loads(resp.read().decode("utf-8"))
             except urllib.error.HTTPError as err:
-                if err.code == 429 and attempt < 5:
+                if err.code == 429:
+                    if rate_limited == MAX_RATE_LIMITED:
+                        raise VerslagError(f"Te vaak rate limited op {path}")
+                    rate_limited += 1
                     wait = int(err.headers.get("Retry-After", "30"))
                     print(f"  Moneybird rate limit, {wait}s wachten...", file=sys.stderr)
                     time.sleep(wait)
                     continue
+                if err.code >= 500 and failed < MAX_RETRIES:
+                    failed += 1
+                    self._retry_pause(f"fout {err.code}", path, failed)
+                    continue
                 body = err.read().decode("utf-8", "replace")[:500]
-                raise SystemExit(f"Moneybird gaf fout {err.code} op {path}: {body}")
-        raise SystemExit(f"Te vaak rate limited op {path}")
+                raise VerslagError(f"Moneybird gaf fout {err.code} op {path}: {body}")
+            except OSError as err:   # geen verbinding, time-out, verbinding verbroken (ook URLError)
+                reason = getattr(err, "reason", None) or err
+                if failed < MAX_RETRIES:
+                    failed += 1
+                    self._retry_pause(str(reason), path, failed)
+                    continue
+                raise VerslagError(f"Moneybird is niet bereikbaar ({reason}). Controleer je internetverbinding.")
+
+    @staticmethod
+    def _retry_pause(reason: str, path: str, attempt: int) -> None:
+        wait = 2 ** attempt   # 2, 4, 8 seconden
+        print(f"  Moneybird: {reason} op {path}, over {wait}s opnieuw...", file=sys.stderr)
+        time.sleep(wait)
 
 
 class FixtureClient:
@@ -62,7 +89,7 @@ class FixtureClient:
         key = path.replace("/", "_")
         file = self.directory / f"{key}.json"
         if not file.exists():
-            raise SystemExit(f"Fixture ontbreekt: {file}")
+            raise VerslagError(f"Fixture ontbreekt: {file}")
         return json.loads(file.read_text(encoding="utf-8"))
 
 
@@ -104,7 +131,7 @@ def make_client(cfg: dict, fixtures: Path | None):
         return FixtureClient(fixtures)
     token = os.environ.get("MONEYBIRD_TOKEN")
     if not token:
-        raise SystemExit("Geen Moneybird-token gevonden. Zet MONEYBIRD_TOKEN=... in het bestand .env "
+        raise VerslagError("Geen Moneybird-token gevonden. Zet MONEYBIRD_TOKEN=... in het bestand .env "
                          "naast het script, of als omgevingsvariabele.")
     return MoneybirdClient(token, cfg["administration_id"])
 

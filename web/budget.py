@@ -11,6 +11,7 @@ from flask import Blueprint, abort, current_app, jsonify, render_template, reque
 
 from verslag.amounts import CODE_RE, Amounts, category_digit
 from verslag.budget import Budget, budget_path, budget_years, college_year, load_budget, save_budget, year_label
+from verslag.errors import VerslagError
 
 from .common import Settings, api_error, has_token, json_body, load_cfg, load_or_error, read_settings
 
@@ -54,8 +55,8 @@ def budget_page():
         cfg, _ = load_cfg()
         path = budget_path(year, directory)
         budget = load_budget(path, year) if path.exists() else None
-    except SystemExit as err:
-        context["error"] = str(err.code)
+    except VerslagError as err:
+        context["error"] = str(err)
         return render_template("begroting.html", **context), 500
 
     report, actual_error = year_report(year, s.source) if budget else (None, None)
