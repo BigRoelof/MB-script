@@ -24,6 +24,15 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") hide(); });
 
+  // Uitklapmenu: sluiten met Escape of door ernaast te klikken
+  const menu = document.querySelector("details.menu");
+  if (menu) {
+    document.addEventListener("click", (e) => { if (menu.open && !menu.contains(e.target)) menu.open = false; });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && menu.open) { menu.open = false; menu.querySelector("summary").focus(); }
+    });
+  }
+
   // Boekregels onder een evenement tonen of verbergen
   document.querySelectorAll(".expand").forEach((btn) => {
     btn.addEventListener("click", () => {

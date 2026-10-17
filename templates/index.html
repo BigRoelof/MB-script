@@ -9,7 +9,7 @@
 </head>
 <body>
 {% macro download(name, label="Download .tex") -%}
-<a class="download" href="{{ url_for('tex_file', name=name, **s.query()) }}" download>
+<a class="download" href="{{ url_for('pages.tex_file', name=name, **s.query()) }}" download>
   <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0L4.5 6.5M8 10l3.5-3.5M3 13h10"/></svg>{{ label }}</a>
 {%- endmacro %}
 {% macro status(state) -%}
@@ -19,27 +19,11 @@
 {%- endmacro %}
 
 <header class="topbar">
-  <a class="wordmark" href="{{ url_for('index') }}">Thalia<span>Jaarverslag</span></a>
-
-  <form class="period" method="get" action="{{ url_for('index') }}">
-    <label>Van <input type="month" name="van" value="{{ s.start.strftime('%Y-%m') }}" required></label>
-    <label>t/m <input type="month" name="tm" value="{{ s.end.strftime('%Y-%m') }}" required></label>
-    <label>Bron
-      <select name="bron">
-        <option value="live" {{ 'selected' if s.source == 'live' }} {{ '' if has_token else 'disabled' }}>Moneybird{{ '' if has_token else ' (geen token)' }}</option>
-        <option value="testdata" {{ 'selected' if s.source == 'testdata' }}>Testdata</option>
-      </select>
-    </label>
-    {% if s.drafts %}<input type="hidden" name="concepten" value="1">{% endif %}
-    <button type="submit">Toon</button>
-  </form>
-
+  {% set page = "dashboard" %}{% include "_menu.html" %}
+  <a class="wordmark" href="{{ url_for('pages.index', **s.query()) }}">Thalia<span>Jaarverslag</span></a>
   {% if report %}
   <div class="actions">
-    <form method="post" action="{{ url_for('refresh', **s.query()) }}">
-      <button class="ghost" type="submit" title="Opgehaald om {{ fetched_at.strftime('%H:%M') }}">Opnieuw ophalen</button>
-    </form>
-    <a class="primary" href="{{ url_for('zip_file', **s.query()) }}" download>Download alle tabellen</a>
+    <a class="primary" href="{{ url_for('pages.zip_file', **s.query()) }}" download>Download alle tabellen</a>
   </div>
   {% endif %}
 </header>
@@ -59,11 +43,8 @@
 {% else %}
 <div class="layout">
   <nav class="rail" aria-label="Onderdelen">
-    <a href="#resultaat">Resultaat</a>
     <a href="#categorieen">Categorieën</a>
     <a href="#evenementen">Evenementen</a>
-    <a href="#balans">Balans</a>
-    <a href="#partners">Partners</a>
     <a href="#controles">Controles
       {% if checks_failed or report.warnings %}<span class="count">{{ checks_failed|length + report.warnings|length }}</span>{% endif %}</a>
     <p class="source">
@@ -73,90 +54,86 @@
     </p>
   </nav>
 
+  {% macro progress_cell(r) -%}
+  {% set p = progress(r) %}
+  <td class="progress-cell">
+    {% if p and p.kind == "unbudgeted" %}
+    <span class="pg-note{{ ' over' if p.over }}" data-tip="{{ r.label }}&#10;Niet begroot&#10;Resultaat {{ r.actual.result|eur }}">niet begroot</span>
+    {% elif p %}
+    <span class="pg {{ p.kind }}{{ ' over' if p.over }}" tabindex="0"
+          data-tip="{{ r.label }}&#10;Begroot resultaat {{ r.budget.result|eur }}&#10;Resultaat {{ r.actual.result|eur }} ({{ p.pct }}%)&#10;Verschil {{ r.difference|eur }}">
+      <span class="pg-track" aria-hidden="true">
+        <span class="pg-fill" style="width: {{ p.fill }}%"></span>
+        {% if p.excess %}<span class="pg-excess{{ ' clipped' if p.clipped }}" style="width: {{ p.excess }}%"></span>{% endif %}
+      </span>
+      <span class="pg-pct">{{ p.flip or (p.pct ~ '%') }}</span>
+    </span>
+    {% endif %}
+  </td>
+  {%- endmacro %}
+
+  {% macro results(rows, sum, first, codes=False, empty="Geen boekingen in deze periode.") -%}
+  <table class="money{{ ' with-budget' if budget }}">
+    <thead>
+      {% if budget %}
+      <tr class="groups"><th></th><th colspan="3">Begroot</th><th colspan="3" class="sep">Realisatie</th><th class="sep" colspan="2"></th></tr>
+      <tr><th>{{ first }}</th><th>Kosten</th><th>Opbrengsten</th><th>Resultaat</th>
+        <th class="sep">Kosten</th><th>Opbrengsten</th><th>Resultaat</th><th class="sep">Verschil</th><th class="progress-head">Van begroting</th></tr>
+      {% else %}
+      <tr><th>{{ first }}</th><th>Kosten</th><th>Opbrengsten</th><th>Resultaat</th></tr>
+      {% endif %}
+    </thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td>{% if codes %}<span class="code">{{ r.code }}</span> {% endif %}{{ r.label }}</td>
+        {% if budget %}<td class="planned">{{ r.budget.debit|num }}</td><td class="planned">{{ r.budget.credit|num }}</td><td class="planned">{{ r.budget.result|num }}</td>{% endif %}
+        <td class="{{ 'sep' if budget }}">{{ r.actual.debit|num }}</td><td>{{ r.actual.credit|num }}</td><td>{{ r.actual.result|num }}</td>
+        {% if budget %}<td class="sep diff">{{ r.difference|num }}</td>{{ progress_cell(r) }}{% endif %}</tr>
+    {% else %}
+      <tr><td class="empty" colspan="{{ 9 if budget else 4 }}">{{ empty }}</td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><td>Totaal</td>
+      {% if budget %}<td>{{ sum.budget.debit|num }}</td><td>{{ sum.budget.credit|num }}</td><td>{{ sum.budget.result|num }}</td>{% endif %}
+      <td class="{{ 'sep' if budget }}">{{ sum.actual.debit|num }}</td><td>{{ sum.actual.credit|num }}</td><td>{{ sum.actual.result|num }}</td>
+      {% if budget %}<td class="sep diff">{{ sum.difference|num }}</td>{{ progress_cell(sum) }}{% endif %}</tr></tfoot>
+  </table>
+  {%- endmacro %}
+
   <main>
-    <section id="resultaat" class="hero">
+    <section id="categorieen" class="first">
       <div class="period-line">
         <p>{{ s.start|datum_lang }} t/m {{ s.end|datum_lang }}</p>
-        <nav class="presets" aria-label="Snelkeuze periode">
-          {% for p in presets %}<a href="{{ p.url }}" {% if p.active %}aria-current="true"{% endif %}>{{ p.label }}</a>{% endfor %}
-        </nav>
       </div>
-      <h1 class="equation" aria-label="Opbrengsten {{ grand.credit|eur }} min kosten {{ grand.debit|eur }} is resultaat {{ grand.result|eur }}">
-        <span class="term credit"><span class="amount">{{ grand.credit|eur }}</span><span class="term-label">opbrengsten</span></span>
-        <span class="op" aria-hidden="true">−</span>
-        <span class="term debit"><span class="amount">{{ grand.debit|eur }}</span><span class="term-label">kosten</span></span>
-        <span class="op" aria-hidden="true">=</span>
-        <span class="term result"><span class="amount">{{ grand.result|eur }}</span><span class="term-label">resultaat</span></span>
-      </h1>
-      <p class="verdict">
-        {% if checks_failed %}{{ status("AFWIJKING") }} {{ checks_failed|length }} van {{ report.checks|length }} controles wijken af.
-        {% elif checks_soft %}{{ status("LET OP") }} {{ checks_ok }} van {{ report.checks|length }} controles in orde, {{ checks_soft|length }} om na te kijken.
-        {% else %}{{ status("OK") }} Alle {{ report.checks|length }} controles kloppen.{% endif %}
-        {% if report.warnings %}<a href="#controles">{{ report.warnings|length }} waarschuwing{{ 'en' if report.warnings|length != 1 }} bekijken</a>
-        {% else %}Geen waarschuwingen.{% endif %}
-      </p>
-    </section>
-
-    <section id="categorieen">
       <div class="section-head">
         <h2>Per categorie</h2>
-        {{ download("results_overview.tex", "Download overzicht .tex") }}
+        {% if budget_exists %}
+        <a class="switch" role="switch" aria-checked="{{ 'true' if s.show_budget else 'false' }}" href="{{ budget_toggle }}">
+          <span class="switch-track" aria-hidden="true"></span>Begroting weergeven</a>
+        {% endif %}
+        {% if budget and not budget.locked %}<span class="budget-tag"><span class="pill">Concept</span></span>{% endif %}
+        {% if s.show_budget %}
+        <a class="download" href="{{ url_for('begroting.budget_page', jaar=budget_year, **s.query()) }}">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 3.5l2 2L6 12H4v-2z"/></svg>{{ 'Begroting bewerken' if budget_exists else 'Begroting maken' }}</a>
+        {% endif %}
+        {{ download("results_overview.tex", "Overzicht .tex") }}
       </div>
-      <div class="overview">
-        <figure class="barchart" aria-label="Kosten en opbrengsten per categorie">
-          <figcaption class="legend">
-            <span><i class="swatch credit"></i>Opbrengsten</span>
-            <span><i class="swatch debit"></i>Kosten</span>
-          </figcaption>
-          <div class="plot">
-            <div class="grid" aria-hidden="true">
-              {% for t in chart.axis %}<span style="left: {{ t.pct }}%"></span>{% endfor %}
-            </div>
-            {% for c in chart.rows %}
-            <div class="bar-row" tabindex="0"
-                 data-tip="{{ c.row.label }}&#10;Opbrengsten {{ c.row.actual.credit|eur }}&#10;Kosten {{ c.row.actual.debit|eur }}&#10;Resultaat {{ c.row.actual.result|eur }}">
-              <span class="bar-label">{{ c.row.label }}</span>
-              <span class="bars">
-                <span class="bar credit" style="width: {{ c.credit_pct }}%"></span>
-                <span class="bar debit" style="width: {{ c.debit_pct }}%"></span>
-              </span>
-            </div>
-            {% endfor %}
-            <div class="axis" aria-hidden="true">
-              {% for t in chart.axis %}<span style="left: {{ t.pct }}%">{{ t.value|geheel }}</span>{% endfor %}
-            </div>
-          </div>
-        </figure>
+      {% if budget and not full_year %}
+      <p class="lede">Begroot is steeds de <em>hele</em> jaarbegroting {{ budget.label|replace('-', '–') }}; de realisatie loopt van {{ s.start|datum }} t/m {{ s.end|datum }}.</p>
+      {% elif not budget_exists %}
+      <p class="lede">Er is nog geen begroting voor {{ budget_year }}–{{ budget_year + 1 }}. Met een begroting komen hier ook de begrote bedragen en het verschil te staan.</p>
+      {% endif %}
 
-        <table class="money">
-          <thead><tr><th>Categorie</th><th>Kosten</th><th>Opbrengsten</th><th>Resultaat</th></tr></thead>
-          <tbody>
-          {% for r in report.overview_rows %}
-            <tr><td>{{ r.label }}</td><td>{{ r.actual.debit|num }}</td><td>{{ r.actual.credit|num }}</td><td>{{ r.actual.result|num }}</td></tr>
-          {% endfor %}
-          </tbody>
-          <tfoot><tr><td>Totaal</td><td>{{ grand.debit|num }}</td><td>{{ grand.credit|num }}</td><td>{{ grand.result|num }}</td></tr></tfoot>
-        </table>
-      </div>
+      {{ results(report.overview_rows, report.grand, "Categorie") }}
 
-      <div class="category-tables">
+      <div class="category-tables{{ ' stacked' if budget }}">
       {% for cat, rows, sum in categories %}
         <section class="category" aria-labelledby="cat-{{ cat.file }}">
           <div class="section-head">
             <h3 id="cat-{{ cat.file }}">{{ cat.name }}</h3>
             {{ download("results_" ~ cat.file ~ ".tex") }}
           </div>
-          <table class="money">
-            <thead><tr><th>Regel</th><th>Kosten</th><th>Opbrengsten</th><th>Resultaat</th></tr></thead>
-            <tbody>
-            {% for r in rows %}
-              <tr><td><span class="code">{{ r.code }}</span> {{ r.label }}</td><td>{{ r.actual.debit|num }}</td><td>{{ r.actual.credit|num }}</td><td>{{ r.actual.result|num }}</td></tr>
-            {% else %}
-              <tr><td class="empty" colspan="4">Geen boekingen in deze periode.</td></tr>
-            {% endfor %}
-            </tbody>
-            <tfoot><tr><td>Totaal</td><td>{{ sum.actual.debit|num }}</td><td>{{ sum.actual.credit|num }}</td><td>{{ sum.actual.result|num }}</td></tr></tfoot>
-          </table>
+          {{ results(rows, sum, "Regel", codes=True) }}
         </section>
       {% endfor %}
       </div>
@@ -165,21 +142,21 @@
     <section id="evenementen">
       <div class="section-head">
         <h2>Evenementen per organizer</h2>
-        <a class="download" href="{{ url_for('lines_csv', **s.query()) }}" download>
-          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0L4.5 6.5M8 10l3.5-3.5M3 13h10"/></svg>Download boekregels .csv</a>
       </div>
-      <p class="lede">Klik op een evenement voor de boekregels erachter. Het staafje toont het resultaat: links verlies, rechts winst, op dezelfde schaal voor alle evenementen.</p>
-      {% for org in organizers %}
-      <section class="organizer" aria-labelledby="org-{{ loop.index }}">
-        <div class="section-head">
-          <h3 id="org-{{ loop.index }}">{{ org.heading }}</h3>
-          <span class="org-total">{{ org.events|length }} evenement{{ 'en' if org.events|length != 1 }}, resultaat {{ org.total.result|eur }}</span>
-          {{ download(org.file) }}
-        </div>
-        <table class="money events">
-          <colgroup><col><col class="c-date"><col class="c-num"><col class="c-num"><col class="c-num"><col class="c-bar"></colgroup>
-          <thead><tr><th>Evenement</th><th>Datum</th><th>Kosten</th><th>Opbrengsten</th><th>Resultaat</th><th><span class="visually-hidden">Resultaat als staaf</span></th></tr></thead>
-          <tbody>
+      <p class="lede">Klik op een evenement voor de boekregels erachter.</p>
+      {% if organizers %}
+      <table class="money events">
+        <colgroup><col><col class="c-date"><col class="c-num"><col class="c-num"><col class="c-num"></colgroup>
+        <thead><tr><th>Evenement</th><th>Datum</th><th>Kosten</th><th>Opbrengsten</th><th>Resultaat</th></tr></thead>
+        {% for org in organizers %}
+        <tbody class="org">
+          <tr class="org-row">
+            <th scope="rowgroup">
+              <span class="org-name">{{ org.heading }}</span>
+              <span class="org-count">{{ org.events|length }} evenement{{ 'en' if org.events|length != 1 }}</span>
+            </th>
+            <td></td><td>{{ org.total.debit|num }}</td><td>{{ org.total.credit|num }}</td><td>{{ org.total.result|num }}</td>
+          </tr>
           {% for e in org.events %}
             {% set rid = "ev-" ~ e.row.event_id %}
             <tr class="event-row">
@@ -192,13 +169,10 @@
               </td>
               <td class="date">{{ e.row.date|datum }}</td>
               <td>{{ e.row.amounts.debit|num }}</td><td>{{ e.row.amounts.credit|num }}</td><td>{{ e.row.amounts.result|num }}</td>
-              <td class="rbar-cell" data-tip="{{ e.row.name }}&#10;Resultaat {{ e.row.amounts.result|eur }}">
-                <span class="rbar"><span class="rbar-fill {{ e.bar.side }}" style="width: {{ e.bar.pct }}%"></span></span>
-              </td>
             </tr>
             {% if e.lines %}
             <tr class="lines-row" id="{{ rid }}" hidden>
-              <td colspan="6">
+              <td colspan="5">
                 <table class="lines">
                   <thead><tr><th>Datum</th><th>Document</th><th>Omschrijving</th><th>Code</th><th>Kosten</th><th>Opbrengsten</th></tr></thead>
                   <tbody>
@@ -212,62 +186,15 @@
             </tr>
             {% endif %}
           {% else %}
-            <tr><td class="empty" colspan="6">Geen evenementen in deze periode.</td></tr>
+            <tr><td class="empty" colspan="5">Geen evenementen in deze periode.</td></tr>
           {% endfor %}
-          </tbody>
-          <tfoot><tr><td>Totaal</td><td></td><td>{{ org.total.debit|num }}</td><td>{{ org.total.credit|num }}</td><td>{{ org.total.result|num }}</td><td></td></tr></tfoot>
-        </table>
-      </section>
+        </tbody>
+        {% endfor %}
+        <tfoot><tr><td>Totaal alle evenementen</td><td></td><td>{{ events_total.debit|num }}</td><td>{{ events_total.credit|num }}</td><td>{{ events_total.result|num }}</td></tr></tfoot>
+      </table>
       {% else %}
       <p class="empty">Geen evenementen in deze periode.</p>
-      {% endfor %}
-    </section>
-
-    <section id="balans">
-      <div class="section-head">
-        <h2>Balans</h2>
-        {{ download("balance_sheet.tex") }}
-      </div>
-      <div class="balance">
-        {% for title, key in [("Activa", "assets"), ("Passiva", "liabilities")] %}
-        <table class="money">
-          <thead><tr><th>{{ title }}</th><th>{{ balance.begin|datum }}</th><th>{{ balance.end|datum }}</th></tr></thead>
-          <tbody>
-          {% for b in balance[key] %}
-            <tr><td>{{ b.name }}</td><td>{{ b.begin|num if b.begin is not none else '–' }}</td><td>{{ b.end|num if b.end is not none else '–' }}</td></tr>
-          {% else %}
-            <tr><td class="empty" colspan="3">Geen posten.</td></tr>
-          {% endfor %}
-          </tbody>
-          <tfoot><tr><td>Totaal</td><td>{{ balance.totals[key][0]|num }}</td><td>{{ balance.totals[key][1]|num }}</td></tr></tfoot>
-        </table>
-        {% endfor %}
-      </div>
-    </section>
-
-    <section id="partners">
-      <div class="section-head">
-        <h2>Partners</h2>
-        {{ download("partners.tex") }}
-      </div>
-      <form class="toggle" method="get" action="{{ url_for('index') }}#partners">
-        {% for k, v in s.query().items() if k != 'concepten' %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
-        <label><input type="checkbox" name="concepten" value="1" {{ 'checked' if s.drafts }} onchange="this.form.requestSubmit()">
-          Conceptfacturen en -offertes meetellen</label>
-        <noscript><button type="submit">Toon</button></noscript>
-      </form>
-      <div class="partners">
-        {% for title, items in report.partners.items() %}
-        <table class="money">
-          <thead><tr><th>{{ title }}</th><th>Bedrag</th></tr></thead>
-          <tbody>
-          {% for name, amount in items %}<tr><td>{{ name }}</td><td>{{ amount|num }}</td></tr>
-          {% else %}<tr><td class="empty" colspan="2">Geen.</td></tr>{% endfor %}
-          </tbody>
-          <tfoot><tr><td>Totaal</td><td>{{ partner_totals[title]|num }}</td></tr></tfoot>
-        </table>
-        {% endfor %}
-      </div>
+      {% endif %}
     </section>
 
     <section id="controles">

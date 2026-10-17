@@ -1,0 +1,47 @@
+# Begroting Thalia 2025-2026. Bewerken via het dashboard (Begroting) of hier met de hand.
+# Bedragen excl. btw: debit = kosten, credit = opbrengsten.
+# status: vastgesteld
+# vastgesteld: 2025-10-16
+code,debit,credit,note
+C101,5520.00,2160.00,~30 borrels × € 200 drank; verkoop bij themaborrels
+C102,1100.00,0.00,30 borrels × € 40
+C103,280.00,0.00,"Thema-aankleding, 6 × € 50"
+C104,550.00,140.00,2 alumniborrels
+C105,830.00,0.00,"Constitutieborrel, cadeaus besturen"
+C106,460.00,0.00,"Overige borrels (iCIS, NVTI)"
+C201,2300.00,1080.00,"EVC: ± 10 activiteiten, deels eigen bijdrage"
+C202,370.00,0.00,"Turing-lezingen, sprekersgiften"
+C203,320.00,0.00,Ouderdag: lunch en koffie
+C204,740.00,270.00,Eerstejaarsactiviteiten
+C205,5520.00,4050.00,Symposium; sponsoring partners en tickets
+C206,1380.00,990.00,"Batavierenrace: 2 teams, inschrijfgeld deels terug"
+C207,5060.00,4320.00,"Weekend, 45 deelnemers × € 107 eigen bijdrage"
+C208,1660.00,810.00,Feest einde semester met zaalhuur
+C209,1100.00,0.00,"Actieve-ledenactiviteit, ± 60 leden × € 20"
+C210,830.00,360.00,"SNiC-congres, 10 tickets"
+C211,460.00,220.00,Wijnproeverij
+C212,280.00,0.00,Lunchlezingen: broodjes
+C213,11040.00,9450.00,"Studiereis, 30 deelnemers; rest uit subsidie"
+C214,4140.00,2880.00,Introductieweek; bijdrage Radboud
+C215,550.00,0.00,Budget societies (€ 150 per society)
+C216,370.00,0.00,
+C218,230.00,0.00,WISO-bijdrage
+C301,1380.00,1620.00,Merchandise: truien en stickers
+C302,0.00,2700.00,Subsidie faculteit
+C303,1100.00,540.00,"Commissiekleding, 50% eigen bijdrage"
+C304,280.00,0.00,
+C305,180.00,0.00,Herbruikbare bekers
+C306,830.00,0.00,Hosting en domeinen (DataWolk)
+C307,1380.00,0.00,"Commissie-uitjes, € 75 per commissie"
+C308,1660.00,0.00,Thabloid: 4 edities drukwerk
+C310,0.00,13500.00,Partnercontracten (zie partneroverzicht)
+C311,0.00,5850.00,± 1300 leden × € 5
+C313,370.00,0.00,Reiskosten bestuur
+C314,1660.00,1620.00,"Eten bij borrels, kostendekkend"
+C401,830.00,0.00,Moneybird-abonnement en kascommissie
+C402,920.00,0.00,"Bestuurspakken, 5 × € 200"
+C403,230.00,0.00,
+C404,280.00,0.00,
+C405,550.00,0.00,Afschrijving tap en laptop
+C501,280.00,0.00,Cadeaus sprekers en vrijwilligers
+C506,0.00,40.00,Rente spaarrekening

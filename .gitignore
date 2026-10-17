@@ -3,6 +3,7 @@ output/
 
 # Python
 __pycache__/
+.pytest_cache/
 *.pyc
 
 # Geheimen nooit committen
@@ -11,3 +12,5 @@ __pycache__/
 
 # Python-omgeving voor het dashboard
 .venv/
+
+*.tex
