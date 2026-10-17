@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from verslag.amounts import Amounts
 from verslag.budget import Budget
-from verslag.events import find_events
+from verslag.events import events_from_csv, find_events
 from verslag.report import build_report
 
 from conftest import END, FIXTURES, START
@@ -12,7 +12,7 @@ from conftest import END, FIXTURES, START
 
 def report(config, data, budget=None, start=START, end=END):
     cfg, label_codes = config
-    return build_report(cfg, label_codes, data, start, end, find_events(None, FIXTURES), budget)
+    return build_report(cfg, label_codes, data, start, end, events_from_csv(find_events(None, FIXTURES)), budget)
 
 
 def test_alle_controles_in_orde_en_geen_waarschuwingen(config, data):

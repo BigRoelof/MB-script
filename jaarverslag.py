@@ -17,13 +17,14 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import sys
+import webbrowser
 from pathlib import Path
 
 from verslag.amounts import Row, fmt_plain
 from verslag.budget import find_budget, load_budget
 from verslag.config import load_config, validate_period
 from verslag.errors import VerslagError
-from verslag.events import find_events
+from verslag.concrexit import TokenStore, concrexit_settings, finish_login, load_event_list, logout, start_login
 from verslag.moneybird import fetch_data, load_dotenv, make_client
 from verslag.report import build_report
 
@@ -40,14 +41,19 @@ def parse_args(argv=None):
     p.add_argument("--codes", type=Path, default=Path(__file__).with_name("codes.csv"),
                    help="CSV met kolommen code,name (standaard codes.csv naast het script)")
     p.add_argument("--events", type=Path,
-                   help="evenementenexport uit concrexit, kolommen id,name,organizer,date "
-                        "(standaard events.csv naast het script, of in de --fixtures-map)")
+                   help="evenementenexport uit concrexit, kolommen id,name,organizer,date (standaard: "
+                        "van thalia.nu als dat gekoppeld is, anders events.csv naast het script, "
+                        "of in de --fixtures-map)")
     p.add_argument("--budget", type=Path,
                    help="begroting, CSV met kolommen code,debit,credit(,note) (standaard "
                         "begroting/<collegejaar>.csv naast het script, bijv. begroting/2026-2027.csv)")
     p.add_argument("--no-budget", action="store_true", help="geen begroting gebruiken")
     p.add_argument("--out", type=Path, default=Path("output"))
     p.add_argument("--fixtures", type=Path, help="map met opgeslagen API-antwoorden (testen zonder token)")
+    login = p.add_mutually_exclusive_group()
+    login.add_argument("--concrexit-login", action="store_true",
+                       help="eenmalig koppelen met thalia.nu, zodat de evenementen daarvandaan komen")
+    login.add_argument("--concrexit-logout", action="store_true", help="de koppeling met thalia.nu opheffen")
     return p.parse_args(argv)
 
 
@@ -55,10 +61,32 @@ def main(argv=None):
     args = parse_args(argv)
     load_dotenv()
     try:
+        if args.concrexit_login or args.concrexit_logout:
+            return concrexit_account(args)
         return run(args)
     except VerslagError as err:
         print(f"Fout: {err}", file=sys.stderr)
         return 1
+
+
+def concrexit_account(args) -> int:
+    """Koppelen met thalia.nu (inloggen in de browser, adres terugplakken) of de koppeling opheffen."""
+    cfg, _ = load_config(args.config, args.codes)
+    settings = concrexit_settings(cfg)
+    store = TokenStore()
+    if args.concrexit_logout:
+        logout(settings, store)
+        print("Koppeling met thalia.nu opgeheven.", file=sys.stderr)
+        return 0
+    login = start_login(settings)
+    print("Open dit adres, log in op thalia.nu en geef toestemming:\n\n"
+          f"  {login.url}\n\n"
+          "Daarna toont je browser een foutpagina; dat hoort zo. Kopieer het hele adres uit de adresbalk\n"
+          f"(begint met {settings.redirect_uri}?code=) en plak het hier.", file=sys.stderr)
+    webbrowser.open(login.url)
+    finish_login(settings, login, input("\nAdres: "), store)
+    print(f"Gekoppeld. De tokens staan in {store.path} (alleen leesbaar voor jou).", file=sys.stderr)
+    return 0
 
 
 def run(args) -> int:
@@ -70,16 +98,16 @@ def run(args) -> int:
     print(f"Periode {args.start:%d-%m-%Y} t/m {args.end:%d-%m-%Y}", file=sys.stderr)
     print("Gegevens ophalen uit Moneybird...", file=sys.stderr)
     data = fetch_data(client, args.start, args.end)
-    events_path = find_events(args.events, args.fixtures)
+    event_list = load_event_list(cfg, args.start, args.end, args.events, args.fixtures)
     if args.no_budget:
         budget = None
     elif args.budget:
         budget = load_budget(args.budget)
     else:
         budget = find_budget(args.start)
-    report = build_report(cfg, label_codes, data, args.start, args.end, events_path, budget)
-    if report.events_path:
-        print(f"Evenementenlijst: {report.events_path}", file=sys.stderr)
+    report = build_report(cfg, label_codes, data, args.start, args.end, event_list, budget)
+    if report.events_source:
+        print(f"Evenementenlijst: {report.events_source}", file=sys.stderr)
     if budget:
         print(f"Begroting: {budget.path} ({budget.status})", file=sys.stderr)
 

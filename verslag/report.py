@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass
-from pathlib import Path
 
 from .amounts import DEFAULT_FORMAT, Row, total
 from .budget import Budget, college_year
-from .events import (DEFAULT_MAX_DAYS, Event, EventLine, EventRow, event_checks, event_lines,
-                     event_warnings, load_events, organizer_groups, slug)
+from .events import (DEFAULT_MAX_DAYS, Event, EventLine, EventList, EventRow, event_checks, event_lines,
+                     event_warnings, organizer_groups, slug)
 from .latex import EXAMPLE_DOC, budget_table, event_table, results_table, tex
 from .results import build_results, completeness_checks, run_checks
 
@@ -30,7 +29,7 @@ class Report:
     overview_rows: list[Row]            # één regel per categorie
     lines: list[EventLine]
     events: dict[str, Event]
-    events_path: Path | None            # None = events.csv niet gevonden
+    events_source: str                  # waar de evenementenlijst vandaan komt; "" = geen lijst
     organizers: list[OrganizerTable]
     budget: Budget | None
     checks: list[tuple[str, str, str]]
@@ -43,7 +42,7 @@ class Report:
 
 
 def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, end: dt.date,
-                 events_path: Path, budget: Budget | None = None) -> Report:
+                 event_list: EventList, budget: Budget | None = None) -> Report:
     """Rekent alles uit en maakt de LaTeX-bestanden (in het geheugen)."""
     warnings: list[str] = []
     if budget is not None:
@@ -80,12 +79,8 @@ def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, e
 
     report_by_code = {r.code: r.actual for rows in tables.values() for r in rows}
     lines = event_lines(data["documents"], data["projects"], data["ledger"], label_codes)
-    events: dict[str, Event] = {}
-    if events_path.exists():
-        events = load_events(events_path)
-    else:
-        warnings.append(f"Evenementenlijst {events_path} niet gevonden: de evenementtabellen tonen alleen "
-                        "nummers en de labels worden niet gecontroleerd.")
+    events = event_list.events
+    warnings += event_list.warnings
     events_cfg = cfg.get("events", {})
     organizers = []
     event_sections = []
@@ -100,6 +95,11 @@ def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, e
         if n > 1:
             warnings.append(f"Evenementen: '{heading}' geeft dezelfde bestandsnaam als een andere organizer; "
                             f"de tabel heet daarom {name}.tex. Geef een andere naam in [events.organizers].")
+        for r in rows:
+            event = events.get(r.event_id)
+            if event and event.other_organizers:
+                warnings.append(f"Evenementen: E{r.event_id} '{event.name}' heeft ook "
+                                f"{', '.join(event.other_organizers)} als organiser; staat alleen bij {heading}.")
         files[f"{name}.tex"] = event_table(rows, number_format=nf)
         organizers.append(OrganizerTable(heading, f"{name}.tex", rows))
         event_sections.append(f"\\subsubsection*{{{tex(heading)}}}\n{{\\small\\input{{{name}}}}}")
@@ -116,5 +116,5 @@ def build_report(cfg: dict, label_codes: set[str], data: dict, start: dt.date, e
                             + "\n".join(budget_sections)) if budget is not None else ""}
 
     return Report(start, end, cfg["categories"], tables, overview_rows,
-                  lines, events, events_path if events_path.exists() else None, organizers, budget,
+                  lines, events, event_list.source, organizers, budget,
                   checks, warnings, files)

@@ -572,6 +572,21 @@ details .lines { margin-top: 0.75rem; }
 .problem p { font-size: 1rem; }
 .problem .hint { color: var(--ink-2); }
 
+/* ---------- Koppeling met thalia.nu ---------- */
+
+.connect > section + section { padding-top: 1.5rem; }
+.connect h2 { font-size: 1.125rem; margin-bottom: 0.5rem; }
+.connect p { max-width: 42rem; }
+.connect code { white-space: normal; overflow-wrap: anywhere; }
+.connect-state { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; }
+.connect-steps { padding-left: 1.25rem; display: grid; gap: 1.25rem; margin: 0.75rem 0 1rem; }
+.connect-steps p { margin: 0 0 0.5rem; }
+.paste { display: flex; flex-wrap: wrap; gap: 0.5rem; max-width: 42rem; }
+.paste input {
+  flex: 1 1 16rem; min-width: 0; padding: 0.3rem 0.5rem;
+  border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--surface);
+}
+
 /* ---------- Tooltip ---------- */
 
 .tooltip {

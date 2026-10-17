@@ -9,6 +9,7 @@ __pycache__/
 # Geheimen nooit committen
 .env
 *.token
+.concrexit-token.json*
 
 # Python-omgeving voor het dashboard
 .venv/

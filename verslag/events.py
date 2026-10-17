@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import datetime as dt
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .amounts import CODE_RE, TOLERANCE, ZERO, Amounts, dec, fmt_plain
@@ -28,6 +28,15 @@ class Event:
     name: str
     date: dt.date
     organizer: str
+    other_organizers: tuple[str, ...] = ()   # concrexit kent meer organisers per event; de eerste telt
+
+
+@dataclass
+class EventList:
+    """De evenementen met naam, datum en organizer, uit events.csv of van thalia.nu."""
+    events: dict[str, Event]
+    source: str                          # waar de lijst vandaan komt; "" = geen lijst
+    warnings: list[str] = field(default_factory=list)
 
 
 def parse_date(text: str) -> dt.date:
@@ -59,6 +68,14 @@ def load_events(path: Path) -> dict[str, Event]:
         organizer = (rec.get("organizer") or "").strip() or "Other"
         events[event_id] = Event(name or f"Event {event_id}", date, organizer)
     return events
+
+
+def events_from_csv(path: Path) -> EventList:
+    """events.csv inlezen; ontbreekt het bestand, dan een lege lijst met een waarschuwing."""
+    if path.exists():
+        return EventList(load_events(path), str(path))
+    return EventList({}, "", [f"Evenementenlijst {path} niet gevonden: de evenementtabellen tonen alleen "
+                              "nummers en de labels worden niet gecontroleerd."])
 
 
 def find_events(events_arg: Path | None, fixtures: Path | None) -> Path:

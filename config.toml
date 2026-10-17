@@ -8,6 +8,15 @@
 
 administration_id = "500528313044830083"   # Thalia Sandbox
 
+[concrexit]
+# Evenementen rechtstreeks van thalia.nu in plaats van events.csv. Eenmalig koppelen met
+# "python3 jaarverslag.py --concrexit-login" of via het menu van het dashboard.
+# De client_id hoort bij de OAuth-applicatie "Thalia jaarverslag" die de TechniCie op thalia.nu
+# aanmaakt (public, authorization code, met de redirect-URI hieronder). Hij is niet geheim.
+base_url = "https://thalia.nu"
+client_id = ""
+redirect_uri = "https://127.0.0.1/thalia-login"
+
 [layout]
 # Regels zonder budget en zonder boekingen weglaten uit de tabellen.
 hide_empty_rows = true
@@ -70,7 +79,8 @@ label_codes = [
 # Waarschuwing als de boekingsdatum meer dan zoveel dagen van de evenementdatum afligt.
 max_days = 60
 
-# Optioneel: nettere namen voor de organizers uit events.csv in het verslag.
+# Optioneel: nettere namen voor de organizers in het verslag. Links de naam zoals hij in events.csv
+# staat, of de commissienaam op thalia.nu als de evenementen daarvandaan komen.
 [events.organizers]
 CAD = "BorrelCie"
 EVC = "Events Committee"
