@@ -1,8 +1,12 @@
-"""De tabellen per categorie (uit de projectrapporten) en de controles op de totalen."""
+"""De tabellen per categorie (uit de projectrapporten), de controles op de totalen en of alles verwerkt is."""
 
 from __future__ import annotations
 
+import datetime as dt
+from decimal import Decimal
+
 from .amounts import CODE_RE, TOLERANCE, ZERO, Amounts, Row, category_digit, dec, fmt_plain, total
+from .moneybird import MUTATIONS_LIMIT
 
 
 def build_results(cfg, projects, revenue, expenses, budget, warnings):
@@ -104,4 +108,52 @@ def run_checks(tables, overview_rows, revenue, expenses, pl):
     check("Categorieen: kosten = overzicht", grand.actual.debit, every_row.actual.debit, "overzicht", "regels")
     check("Categorieen: begroting = overzicht", grand.budget.result, every_row.budget.result, "overzicht", "regels")
 
+    return checks
+
+
+def _names(docs: list[dict], shown: int = 3) -> str:
+    names = [d.get("reference") or (d.get("contact") or {}).get("company_name") or "zonder naam" for d in docs]
+    names.sort()
+    rest = len(names) - shown
+    return ", ".join(names[:shown]) + (f" en {rest} andere" if rest > 0 else "")
+
+
+def _excl_tax(doc: dict) -> Decimal:
+    return sum((dec(d.get("total_price_excl_tax_with_discount")) for d in doc.get("details", [])), ZERO)
+
+
+def completeness_checks(documents: dict, unprocessed_mutations: list[dict]):
+    """Is de administratie af? Concepten tellen niet mee in de rapporten en onverwerkte bankmutaties
+    zijn nog nergens geboekt. De tabellen kloppen dan wel met Moneybird, maar zijn nog niet compleet:
+    daarom LET OP en geen AFWIJKING."""
+    checks = []
+
+    sales = [d for d in documents["sales_invoices"] if d.get("state") in ("draft", "scheduled")]
+    sales += [d for d in documents["external_sales_invoices"] if d.get("state") == "new"]
+    incoming = [d for kind in ("purchase_invoices", "receipts") for d in documents[kind] if d.get("state") == "new"]
+    parts = []
+    if sales:
+        parts.append(f"{len(sales)} verkoopfactu{'ren' if len(sales) != 1 else 'ur'} in concept "
+                     f"({fmt_plain(sum(map(_excl_tax, sales), ZERO))} excl. btw): {_names(sales)}")
+    if incoming:
+        parts.append(f"{len(incoming)} inkomend{'e' if len(incoming) != 1 else ''} document"
+                     f"{'en' if len(incoming) != 1 else ''} niet opgeslagen "
+                     f"({fmt_plain(sum(map(_excl_tax, incoming), ZERO))} excl. btw): {_names(incoming)}")
+    name = "Moneybird: geen concepten"
+    checks.append((name, "LET OP", "; ".join(parts) + ". Deze tellen niet mee.") if parts else (name, "OK", "geen"))
+
+    name = "Moneybird: bankmutaties verwerkt"
+    if unprocessed_mutations:
+        amounts = [dec(m.get("amount")) for m in unprocessed_mutations]
+        n = len(amounts)
+        count = f"{MUTATIONS_LIMIT} of meer" if n >= MUTATIONS_LIMIT else str(n)
+        dates = sorted(m["date"] for m in unprocessed_mutations if m.get("date"))
+        checks.append((name, "LET OP",
+                       f"{count} onverwerkte bankmutatie{'s' if n != 1 else ''} "
+                       f"(in {fmt_plain(sum((a for a in amounts if a > 0), ZERO))}, "
+                       f"uit {fmt_plain(-sum((a for a in amounts if a < 0), ZERO))}"
+                       + (f", oudste {dt.date.fromisoformat(dates[0][:10]):%d-%m-%Y}" if dates else "")
+                       + "). Die zijn nog nergens geboekt."))
+    else:
+        checks.append((name, "OK", "alles verwerkt"))
     return checks

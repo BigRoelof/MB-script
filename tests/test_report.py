@@ -17,9 +17,32 @@ def report(config, data, budget=None, start=START, end=END):
 
 def test_alle_controles_in_orde_en_geen_waarschuwingen(config, data):
     r = report(config, data)
-    assert [c for c in r.checks if c[1] != "OK"] == []
-    assert len(r.checks) == 10
+    # De sandbox heeft acht conceptfacturen (F2627001 t/m F2627008); verder klopt alles
+    assert [c[0] for c in r.checks if c[1] != "OK"] == ["Moneybird: geen concepten"]
+    assert len(r.checks) == 12
     assert r.warnings == []
+
+
+def test_concepten_en_bankmutaties(config, data):
+    drafts = next(c for c in report(config, data).checks if c[0] == "Moneybird: geen concepten")
+    assert drafts[1] == "LET OP"
+    assert "8 verkoopfacturen in concept (7,175.00 excl. btw)" in drafts[2]
+
+    receipt = {"state": "new", "reference": "2627099",
+               "details": [{"total_price_excl_tax_with_discount": "12.50"}]}
+    mutations = [{"amount": "-12.50", "date": "2026-10-03"}, {"amount": "40.0", "date": "2026-09-20"}]
+    data = {**data, "unprocessed_mutations": mutations,
+            "documents": {**data["documents"], "sales_invoices": [],
+                          "receipts": [*data["documents"]["receipts"], receipt]}}
+    checks = {c[0]: c for c in report(config, data).checks}
+    assert checks["Moneybird: geen concepten"][2] == \
+        "1 inkomend document niet opgeslagen (12.50 excl. btw): 2627099. Deze tellen niet mee."
+    assert checks["Moneybird: bankmutaties verwerkt"][1:] == \
+        ("LET OP", "2 onverwerkte bankmutaties (in 40.00, uit 12.50, oudste 20-09-2026). "
+                   "Die zijn nog nergens geboekt.")
+    # Bij de limiet van Moneybird weten we alleen dat het er minstens zoveel zijn
+    many = report(config, {**data, "unprocessed_mutations": mutations * 50}).checks
+    assert "100 of meer onverwerkte" in next(c for c in many if c[0] == "Moneybird: bankmutaties verwerkt")[2]
 
 
 def test_totalen_kloppen_met_de_sandbox(config, data):

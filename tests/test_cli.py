@@ -11,4 +11,4 @@ def test_script_schrijft_tabellen(tmp_path, capsys):
                              "--no-budget", "--out", str(out)])
     assert code == 0
     assert (out / "results_overview.tex").exists() and (out / "example.tex").exists()
-    assert "10 van 10 in orde" in capsys.readouterr().err
+    assert "11 van 12 in orde, 1 let op" in capsys.readouterr().err

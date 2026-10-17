@@ -88,7 +88,8 @@ Na afloop print het script de totalen per categorie en een lijst **Controles** m
 - projectrapporten tegenover de winst-en-verliesrekening (opbrengsten en kosten);
 - het totaal van de overzichtstabel tegenover de winst-en-verliesrekening (opbrengsten, kosten, resultaat);
 - alle regels van de categorietabellen opgeteld tegenover het overzicht;
-- alle boekregels onder de labelcodes tegenover de projectrapporten.
+- alle boekregels onder de labelcodes tegenover de projectrapporten;
+- of de administratie af is (`LET OP` als dat niet zo is): **concepten** (conceptfacturen en niet-opgeslagen inkomende documenten tellen niet mee in de rapporten) en **onverwerkte bankmutaties** in de periode.
 
 Bij een `AFWIJKING` eindigt het script met exitcode 1 (de tabellen worden wel geschreven). Daarnaast waarschuwt het bij:
 

@@ -16,6 +16,8 @@ from .config import PROJECT_DIR
 
 
 API_BASE = "https://moneybird.com/api/v2"
+# financial_mutations geeft zonder paginering hooguit zoveel mutaties terug
+MUTATIONS_LIMIT = 100
 
 
 class MoneybirdClient:
@@ -133,4 +135,8 @@ def fetch_data(client, start: dt.date, end: dt.date) -> dict:
             "general_journal_documents": paged(client, "documents/general_journal_documents",
                                                {"filter": f"period:{period}"}),
         },
+        # Voor de controle of alles verwerkt is. Dit endpoint pagineert niet en geeft er hooguit
+        # MUTATIONS_LIMIT terug; meer dan genoeg om te zien dat er nog werk ligt.
+        "unprocessed_mutations": client.get("financial_mutations",
+                                            {"filter": f"period:{period},state:unprocessed"}),
     }
