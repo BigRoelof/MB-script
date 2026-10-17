@@ -87,6 +87,6 @@ Administratie "Thalia Sandbox", id `500528313044830083`, eigenaar de penningmees
 ## Open punten
 
 1. **Beveiliging:** het token stond eerder in de docstring van `jaarverslag.py`; de gebruiker heeft het op 10 okt 2026 vervangen door `"..."` vóór de eerste commit (het zit dus niet in de git-geschiedenis). Het oude token in Moneybird intrekken als dat nog niet gebeurd is. Nooit tokens in getrackte bestanden zetten; alleen in `.env` (gitignored) of de omgeving.
-2. Nog nooit een echte run tegen de live API met een token gedaan; alleen fixtures.
+2. Live API werkt (token in `.env`, sandbox): op 17 okt 2026 script live gedraaid, 10 van 10 controles in orde, alle 20 .tex-bestanden identiek aan de fixtures-uitvoer; het dashboard gebruikt standaard live als er een token is. Nog niet gedraaid tegen de echte administratie.
 3. Concrexit aanpassen (pushformaat + events.csv-export) — werk van de gebruiker.
 4. Tabelopmaak afstemmen op de echte LaTeX-template.
