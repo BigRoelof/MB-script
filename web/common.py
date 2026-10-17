@@ -13,13 +13,16 @@ from flask import abort, current_app, jsonify, request
 from verslag.budget import college_year, find_budget
 from verslag.config import load_config, validate_period
 from verslag.errors import VerslagError
-from verslag.events import find_events
+from verslag.concrexit import load_event_list
+from verslag.events import EventList, events_from_csv, find_events
 from verslag.moneybird import fetch_data, make_client
 from verslag.report import build_report
 
 # Opgehaalde Moneybird-gegevens per (bron, administratie, periode): (tijdstip, data).
 # De live API is traag en heeft een rate limit; "Opnieuw ophalen" leegt de cache.
 _cache: dict[tuple, tuple[dt.datetime, dict]] = {}
+# Evenementen van thalia.nu, met dezelfde sleutel en ook geleegd door "Opnieuw ophalen"
+_events_cache: dict[tuple, EventList] = {}
 
 
 def has_token() -> bool:
@@ -81,15 +84,28 @@ def load_data(s: Settings, cfg: dict) -> tuple[dt.datetime, dict]:
     return _cache[key]
 
 
+def load_events(s: Settings, cfg: dict) -> EventList:
+    """De evenementenlijst. Bij de testdata altijd events.csv (elke keer opnieuw gelezen, zoals
+    de begroting); live van thalia.nu als dat gekoppeld is (gecachet), anders events.csv."""
+    if s.source == "testdata":
+        return events_from_csv(find_events(None, current_app.config["FIXTURES"]))
+    key = cache_key(s, cfg)
+    if key not in _events_cache:
+        event_list = load_event_list(cfg, s.start, s.end, store=current_app.config["CONCREXIT_TOKENS"])
+        if event_list.source != "thalia.nu":
+            return event_list   # events.csv: niet cachen, zodat een nieuwe export meteen zichtbaar is
+        _events_cache[key] = event_list
+    return _events_cache[key]
+
+
 def load(s: Settings):
     """Geeft (cfg, report, opgehaald_om). Fouten komen als VerslagError."""
     validate_period(s.start, s.end)
     cfg, label_codes = load_cfg()
-    fixtures = current_app.config["FIXTURES"] if s.source == "testdata" else None
     fetched_at, data = load_data(s, cfg)
     # De begroting wordt elke keer opnieuw gelezen: wijzigingen in de editor zijn meteen zichtbaar
     report = build_report(cfg, label_codes, data, s.start, s.end,
-                          find_events(None, fixtures),
+                          load_events(s, cfg),
                           find_budget(s.start, current_app.config["BUDGET_DIR"]) if s.show_budget else None)
     return cfg, report, fetched_at
 
@@ -105,20 +121,32 @@ def clear_cache(s: Settings) -> None:
     """Vergeet de opgehaalde gegevens van deze bron en periode ("Opnieuw ophalen")."""
     for key in [k for k in _cache if k[0] == s.source and k[2:] == (s.start, s.end)]:
         del _cache[key]
+    for key in [k for k in _events_cache if k[0] == s.source and k[2:] == (s.start, s.end)]:
+        del _events_cache[key]
+
+
+def clear_events_cache() -> None:
+    """Na koppelen of ontkoppelen met thalia.nu: alle evenementenlijsten opnieuw ophalen."""
+    _events_cache.clear()
 
 
 # --------------------------------------------------------------------------
 # Voor de API's (begroting en codes)
 # --------------------------------------------------------------------------
 
+def same_origin() -> None:
+    """Weigert verzoeken die vanaf een andere website komen (browsers sturen dan hun Origin mee)."""
+    origin = request.headers.get("Origin")
+    if origin and urlsplit(origin).netloc != request.host:
+        abort(403)
+
+
 def json_body() -> dict:
     """Alleen JSON van deze pagina zelf. Een andere website kan zo geen wijzigingen insturen:
     JSON van een ander domein vraagt eerst toestemming (CORS) en die geven we niet."""
     if not request.is_json:
         abort(415)
-    origin = request.headers.get("Origin")
-    if origin and urlsplit(origin).netloc != request.host:
-        abort(403)
+    same_origin()
     body = request.get_json(silent=True)
     if not isinstance(body, dict):
         abort(400)

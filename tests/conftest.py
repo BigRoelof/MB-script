@@ -33,12 +33,15 @@ def codes_file(tmp_path) -> Path:
 
 
 @pytest.fixture
-def client(tmp_path, codes_file):
-    """Testclient voor het dashboard, met een lege begrotingsmap en kopieën van codes.csv en config.toml."""
+def client(tmp_path, codes_file, monkeypatch):
+    """Testclient voor het dashboard, met een lege begrotingsmap, kopieën van codes.csv en config.toml
+    en een eigen (leeg) tokenbestand voor thalia.nu."""
+    from verslag.concrexit import TokenStore
     from web import create_app
+    monkeypatch.delenv("CONCREXIT_TOKEN", raising=False)
     app = create_app()
     config_file = tmp_path / "config.toml"
     shutil.copy(PROJECT_DIR / "config.toml", config_file)
     app.config.update(TESTING=True, FIXTURES=FIXTURES, BUDGET_DIR=tmp_path / "begroting", CODES=codes_file,
-                      CONFIG=config_file)
+                      CONFIG=config_file, CONCREXIT_TOKENS=TokenStore(tmp_path / "concrexit-token.json"))
     return app.test_client()

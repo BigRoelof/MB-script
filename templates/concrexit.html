@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thalia koppeling</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+<script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
+</head>
+<body>
+<header class="topbar">
+  {% set page = "concrexit" %}{% include "_menu.html" %}
+  <a class="wordmark" href="{{ url_for('pages.index', **s.query()) }}">Thalia<span>Koppeling</span></a>
+</header>
+
+<main class="layout single connect">
+  <section class="hero">
+    <h1 class="page-title">Evenementen van thalia.nu</h1>
+    <p class="lede">Gekoppeld haalt het dashboard naam, datum en organiser van elk evenement (ook ongepubliceerde)
+      rechtstreeks uit concrexit. Zonder koppeling komen ze uit <code>events.csv</code>.
+      Met de testdata wordt altijd <code>events.csv</code> gebruikt.</p>
+
+    {% if just_connected %}
+    <p class="connect-state"><span class="status good"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>Gekoppeld</span>
+      De evenementen komen voortaan van thalia.nu.</p>
+    {% endif %}
+    {% if error %}
+    <p class="connect-state" role="alert"><span class="status crit"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>Niet gelukt</span>
+      {{ error }}</p>
+    {% endif %}
+  </section>
+
+  {% if env_token %}
+  <section>
+    <h2>Gekoppeld via <code>CONCREXIT_TOKEN</code></h2>
+    <p>Er staat een access token in de omgeving of in <code>.env</code>. Dat gaat voor; het wordt niet ververst
+      en is na ongeveer tien uur verlopen. Haal het weg om de gewone koppeling te gebruiken.</p>
+  </section>
+  {% elif connected %}
+  <section>
+    <h2>Gekoppeld</h2>
+    <p>De tokens staan in <code>.concrexit-token.json</code>, alleen leesbaar voor jou. Ontkoppelen trekt ze ook
+      in op thalia.nu; lukt dat niet, dan kan het daar onder <em>Authorised applications</em>.</p>
+    <form method="post" action="{{ url_for('concrexit.disconnect', **s.query()) }}">
+      <button type="submit">Ontkoppelen</button>
+    </form>
+  </section>
+  {% elif settings and not settings.client_id %}
+  <section>
+    <h2>Nog niet in te stellen</h2>
+    <p>In <code>config.toml</code> ontbreekt onder <code>[concrexit]</code> de <code>client_id</code>. Die krijg je
+      van de TechniCie: zij maken op thalia.nu de OAuth-applicatie "Thalia jaarverslag" aan
+      (public, authorization code, redirect-URI <code>{{ settings.redirect_uri }}</code>).</p>
+  </section>
+  {% elif settings %}
+  <section>
+    <h2>Koppelen</h2>
+    <ol class="connect-steps">
+      <li>
+        <p>Log in op thalia.nu (met 2FA) en geef toestemming. Dat opent in een nieuw tabblad.</p>
+        <form method="post" action="{{ url_for('concrexit.start', **s.query()) }}" target="_blank">
+          <button type="submit" class="primary">Inloggen op thalia.nu</button>
+        </form>
+      </li>
+      <li>
+        <p>Daarna toont dat tabblad een foutpagina; dat hoort zo. Kopieer het hele adres uit de adresbalk
+          (begint met <code>{{ settings.redirect_uri }}?code=</code>) en plak het hier.</p>
+        <form method="post" action="{{ url_for('concrexit.connect', **s.query()) }}" class="paste">
+          <label class="visually-hidden" for="adres">Adres uit de adresbalk</label>
+          <input type="url" id="adres" name="adres" required placeholder="{{ settings.redirect_uri }}?code=…" autocomplete="off">
+          <button type="submit" class="primary">Koppelen</button>
+        </form>
+      </li>
+    </ol>
+    <p class="note">Het dashboard vraagt de scope <code>events:admin</code>. Die geeft ook schrijfrechten op
+      evenementen, maar het dashboard doet alleen leesverzoeken.</p>
+  </section>
+  {% endif %}
+</main>
+</body>
+</html>

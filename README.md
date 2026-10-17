@@ -36,7 +36,21 @@ Welke code bij welke regelnaam hoort, staat in **`codes.csv`** (kolommen `code,n
 
 ## Evenementen
 
-Een boekregel hoort bij een evenement via het label `[E<id>]` (event-id uit concrexit), in de omschrijving van de regel of in de naam van het document. In de documentnaam mag het tussen haken (zo pusht concrexit, bijv. `Food Maandborrel September [9107] [E1202]`) of los erachter, zoals je het zelf typt: `2627017 E1206` of `F2627001 E1205` (met hoofdletter E). Noemt een documentnaam meer dan één evenement, dan zet je het label per regel in de omschrijving. Naam, datum en organizer komen uit **`events.csv`** (export uit concrexit, kolommen `id,name,organizer,date`), standaard naast het script. Per organizer komt er een tabel met zijn evenementen. In `config.toml` staan onder `[events]` de codes waar elke regel een label hoort te hebben (`label_codes`) en optioneel nettere organizernamen (`[events.organizers]`).
+Een boekregel hoort bij een evenement via het label `[E<id>]` (event-id uit concrexit), in de omschrijving van de regel of in de naam van het document. In de documentnaam mag het tussen haken (zo pusht concrexit, bijv. `Food Maandborrel September [9107] [E1202]`) of los erachter, zoals je het zelf typt: `2627017 E1206` of `F2627001 E1205` (met hoofdletter E). Noemt een documentnaam meer dan één evenement, dan zet je het label per regel in de omschrijving. Naam, datum en organizer komen **van thalia.nu** als je gekoppeld bent (zie hieronder), anders uit **`events.csv`** (export uit concrexit, kolommen `id,name,organizer,date`), standaard naast het script. Per organizer komt er een tabel met zijn evenementen. In `config.toml` staan onder `[events]` de codes waar elke regel een label hoort te hebben (`label_codes`) en optioneel nettere organizernamen (`[events.organizers]`).
+
+### Koppelen met thalia.nu
+
+Gekoppeld haalt het script of dashboard de evenementen (ook ongepubliceerde) rechtstreeks uit concrexit, via `/api/v2/admin/events/`. Daarvoor is nodig:
+
+- een OAuth-applicatie op thalia.nu, aangemaakt door de TechniCie (public, grant type *authorization code*, redirect-URI `https://127.0.0.1/thalia-login`); de client-id zet je in `config.toml` onder `[concrexit]`;
+- een thalia.nu-account dat staff is en events mag bekijken (de penningmeester heeft dat).
+
+Koppelen doe je eenmalig met `python3 jaarverslag.py --concrexit-login`, of in het dashboard via **Koppeling thalia.nu** in het menu: je logt in op thalia.nu (met 2FA), geeft toestemming en plakt het adres uit de adresbalk terug (de browser toont daar een foutpagina; dat hoort zo). De tokens komen in `.concrexit-token.json` (gitignored, alleen voor jou leesbaar) en worden daarna vanzelf ververst. Ontkoppelen: `--concrexit-logout` of de knop in het dashboard; dat trekt de koppeling ook in op thalia.nu. De koppeling vraagt de scope `events:admin`, die ook schrijfrechten geeft; het script doet alleen leesverzoeken. Een nieuwe penningmeester koppelt met een eigen account.
+
+- Een evenement met meer organisers komt bij de eerste (concrexit sorteert ze op naam), met een waarschuwing.
+- Er worden ook de evenementen van een jaar vóór en na de periode opgehaald, voor boekingen op evenementen buiten de periode.
+- Lukt ophalen niet, dan gebruikt het verslag `events.csv` en staat dat bij de waarschuwingen. Met `--events` of de testdata wordt altijd het bestand gebruikt.
+- In `[events.organizers]` gebruik je dan de commissienamen zoals ze op thalia.nu staan.
 
 ## Begroting
 
@@ -76,7 +90,8 @@ Opties:
 
 - `--codes BESTAND`: ander codebestand (standaard `codes.csv`).
 - `--out MAP`: waar de bestanden komen (standaard `output`).
-- `--events BESTAND`: andere evenementenlijst (standaard `events.csv` naast het script, of in de `--fixtures`-map).
+- `--events BESTAND`: andere evenementenlijst (standaard van thalia.nu als dat gekoppeld is, anders `events.csv` naast het script, of in de `--fixtures`-map).
+- `--concrexit-login` / `--concrexit-logout`: koppelen met thalia.nu of de koppeling opheffen.
 - `--budget BESTAND`: andere begroting (standaard `begroting/<collegejaar>.csv`, het jaar waarin `--start` valt).
 - `--no-budget`: zonder begroting (tabellen zonder budgetkolommen).
 - `--fixtures tests/fixtures`: draaien op opgeslagen testdata, zonder token.
@@ -100,7 +115,7 @@ Bij een `AFWIJKING` eindigt het script met exitcode 1 (de tabellen worden wel ge
 
 ## Code en tests
 
-- `jaarverslag.py` is het commando; het rekenwerk staat in het pakket **`verslag/`** (één module per onderwerp: `errors`, `moneybird`, `config`, `budget`, `results`, `events`, `latex`, `report`; zie de docstring in `verslag/__init__.py`).
+- `jaarverslag.py` is het commando; het rekenwerk staat in het pakket **`verslag/`** (één module per onderwerp: `errors`, `http_json`, `moneybird`, `config`, `budget`, `results`, `events`, `concrexit`, `latex`, `report`; zie de docstring in `verslag/__init__.py`).
 - `dashboard.py` start de webapp; de code daarvan staat in **`web/`** (startpagina en downloads in `pages.py`, de begroting in `budget.py`). Templates en stijlen staan in `templates/` en `static/`.
 - Tests (eenmalig `.venv/bin/pip install -r requirements-dev.txt`):
   ```sh

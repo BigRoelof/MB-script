@@ -6,7 +6,7 @@ import urllib.error
 
 import pytest
 
-from verslag import moneybird
+from verslag import http_json
 from verslag.errors import VerslagError
 from verslag.moneybird import MoneybirdClient
 
@@ -27,8 +27,8 @@ def answers(monkeypatch):
             raise answer
         return io.BytesIO(json.dumps(answer).encode())
 
-    monkeypatch.setattr(moneybird.urllib.request, "urlopen", urlopen)
-    monkeypatch.setattr(moneybird.time, "sleep", waits.append)
+    monkeypatch.setattr(http_json.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(http_json.time, "sleep", waits.append)
     return queue, waits
 
 

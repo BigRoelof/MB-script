@@ -1,5 +1,5 @@
 {# Uitklapmenu linksboven, op elke pagina hetzelfde. Verwacht `s` (Settings) en `page`
-   ("dashboard", "begroting" of "codes"); `fetched_at` is optioneel. #}
+   ("dashboard", "begroting", "codes" of "concrexit"); `fetched_at` is optioneel. #}
 <details class="menu">
   <summary aria-label="Menu">
     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4h11M2.5 8h11M2.5 12h11"/></svg>
@@ -29,7 +29,8 @@
         <button class="ghost" type="submit">
           <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 2.5v3h-3"/></svg>Opnieuw ophalen</button>
         <span class="note">{% if fetched_at %}Opgehaald om {{ fetched_at.strftime('%H:%M') }}{% endif %}
-          uit {{ 'de testdata' if s.source == 'testdata' else 'Moneybird' }}</span>
+          uit {{ 'de testdata' if s.source == 'testdata' else 'Moneybird' }};
+          evenementen {{ 'van thalia.nu' if concrexit_connected and s.source == 'live' else 'uit events.csv' }}</span>
       </form>
     </section>
 
@@ -38,6 +39,7 @@
       <a href="{{ url_for('pages.index', **s.query()) }}" {% if page == 'dashboard' %}aria-current="page"{% endif %}>Dashboard</a>
       <a href="{{ url_for('begroting.budget_page', **s.query()) }}" {% if page == 'begroting' %}aria-current="page"{% endif %}>Begroting</a>
       <a href="{{ url_for('codes.codes_page', **s.query()) }}" {% if page == 'codes' %}aria-current="page"{% endif %}>Codes</a>
+      <a href="{{ url_for('concrexit.concrexit_page', **s.query()) }}" {% if page == 'concrexit' %}aria-current="page"{% endif %}>Koppeling thalia.nu</a>
     </nav>
   </div>
 </details>
