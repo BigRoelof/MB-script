@@ -2,35 +2,30 @@
 
 from __future__ import annotations
 
-import datetime as dt
 import re
 
 from flask import Blueprint, current_app, jsonify, render_template
 
-from verslag.amounts import CODE_RE, category_digit
-from verslag.budget import budget_path, budget_years, college_year, load_budget
+from verslag.amounts import CODE_RE, category_digit, dec
+from verslag.budget import budget_path, budget_years, load_budget
 from verslag.config import delete_code, edit_codes, set_label_code
 
-from .common import api_error, booked_projects, has_token, json_body, load_cfg, load_data, read_settings
+from .common import api_error, has_token, json_body, load_cfg, load_data, read_settings
 
 bp = Blueprint("codes", __name__)
 
 
-# Hoe ver terug "Laatst gebruikt in" zoekt (in collegejaren)
-MAX_YEARS_BACK = 10
-
-
-def code_usage(cfg: dict, s) -> tuple[dict, dict, dict, str | None]:
-    """Waar de codes gebruikt worden: (projecten, laatst gebruikt, begrotingen, fout).
+def code_usage(cfg: dict, s) -> tuple[dict, set, dict, str | None]:
+    """Waar de codes gebruikt worden: (projecten, geboekt, begrotingen, fout).
 
     - projecten: {code: [{name, archived}]}, de projecten in Moneybird die met de code beginnen
-    - laatst gebruikt: {code: collegejaar} met de laatste boekingen, terugzoekend vanaf het huidige
-      collegejaar tot een jaar zonder enige boeking (vóór de start van de administratie)
+    - geboekt: de codes met kosten of opbrengsten in de gekozen periode (uit de projectrapporten
+      die het dashboard toch al ophaalt, dus zonder extra requests)
     - begrotingen: {code: ["2026–27", ...]}, alleen om verwijderen te voorkomen
-    Lukt het ophalen uit Moneybird niet, dan is de fout gezet en zijn projecten en laatst gebruikt leeg.
+    Lukt het ophalen uit Moneybird niet, dan is de fout gezet en zijn projecten en geboekt leeg.
     """
     projects: dict[str, list[dict]] = {}
-    last_used: dict[str, int] = {}
+    booked: set[str] = set()
     error = None
     try:
         _, data = load_data(s, cfg)
@@ -40,14 +35,8 @@ def code_usage(cfg: dict, s) -> tuple[dict, dict, dict, str | None]:
                 code = m.group(1).upper()
                 code_of[p["id"]] = code
                 projects.setdefault(code, []).append({"name": p["name"], "archived": p.get("state") == "archived"})
-        current = college_year(dt.date.today())
-        for year in range(current, current - MAX_YEARS_BACK, -1):
-            booked = booked_projects(s.source, cfg, year)
-            for pid in booked:
-                if pid in code_of:
-                    last_used.setdefault(code_of[pid], year)
-            if not booked or all(c in last_used for c in cfg["rows"]):
-                break
+        booked = {code_of[r["project_id"]] for r in data["revenue"] + data["expenses"]
+                  if r.get("project_id") in code_of and dec(r["amount"]) != 0}
     except SystemExit as err:
         error = str(err.code)
     budgets: dict[str, list[str]] = {}
@@ -57,7 +46,7 @@ def code_usage(cfg: dict, s) -> tuple[dict, dict, dict, str | None]:
         for code, amounts in budget.amounts.items():
             if not amounts.is_zero():
                 budgets.setdefault(code, []).append(short_year(year))
-    return projects, last_used, budgets, error
+    return projects, booked, budgets, error
 
 
 def short_year(year: int) -> str:
@@ -73,8 +62,7 @@ def codes_page():
     except SystemExit as err:
         context["error"] = str(err.code)
         return render_template("codes.html", **context), 500
-    projects, last_used, budgets, projects_error = code_usage(cfg, s)
-    current = college_year(dt.date.today())
+    projects, booked, budgets, projects_error = code_usage(cfg, s)
     categories = []
     for c in cfg["categories"]:
         codes = sorted(k for k in cfg["rows"] if category_digit(k) == c["digit"])
@@ -84,8 +72,7 @@ def codes_page():
             "code": k,
             "name": cfg["rows"][k],
             "projects": projects.get(k, []),
-            "last_used": ("actief" if last_used[k] == current else short_year(last_used[k]))
-                         if k in last_used else None,
+            "booked": k in booked,
             "label": k in label_codes,
             "deletable": not projects_error and k not in projects and k not in budgets and k not in label_codes,
         } for k in codes]})

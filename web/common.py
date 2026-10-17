@@ -14,15 +14,12 @@ from flask import abort, current_app, jsonify, request
 from verslag.budget import college_year, find_budget
 from verslag.config import load_config, validate_period
 from verslag.events import find_events
-from verslag.amounts import dec
-from verslag.moneybird import fetch_data, fetch_project_reports, make_client
+from verslag.moneybird import fetch_data, make_client
 from verslag.report import build_report
 
 # Opgehaalde Moneybird-gegevens per (bron, administratie, periode): (tijdstip, data).
 # De live API is traag en heeft een rate limit; "Opnieuw ophalen" leegt de cache.
 _cache: dict[tuple, tuple[dt.datetime, dict]] = {}
-# Per (bron, administratie, collegejaar): de project-id's met boekingen in dat jaar (voor "Laatst gebruikt in")
-_booked: dict[tuple, set[str]] = {}
 
 
 def has_token() -> bool:
@@ -106,23 +103,10 @@ def load_or_error(s: Settings):
         return None, f"Moneybird is niet bereikbaar ({err.reason}). Controleer je internetverbinding."
 
 
-def booked_projects(source: str, cfg: dict, year: int) -> set[str]:
-    """Project-id's met kosten of opbrengsten in collegejaar `year` (uit de projectrapporten)."""
-    key = (source, cfg.get("administration_id"), year)
-    if key not in _booked:
-        fixtures = current_app.config["FIXTURES"] if source == "testdata" else None
-        revenue, expenses = fetch_project_reports(make_client(cfg, fixtures),
-                                                  dt.date(year, 9, 1), dt.date(year + 1, 8, 31))
-        _booked[key] = {r["project_id"] for r in revenue + expenses if dec(r["amount"]) != 0 and r["project_id"]}
-    return _booked[key]
-
-
 def clear_cache(s: Settings) -> None:
     """Vergeet de opgehaalde gegevens van deze bron en periode ("Opnieuw ophalen")."""
     for key in [k for k in _cache if k[0] == s.source and k[2:] == (s.start, s.end)]:
         del _cache[key]
-    for key in [k for k in _booked if k[0] == s.source]:
-        del _booked[key]
 
 
 # --------------------------------------------------------------------------

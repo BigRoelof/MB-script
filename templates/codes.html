@@ -66,7 +66,7 @@
         <colgroup><col class="c-code"><col class="c-name"><col class="c-label"><col class="c-projects"><col class="c-usage"><col class="c-action"></colgroup>
         <thead><tr><th>Code</th><th>Naam</th>
           <th class="label-head"><span tabindex="0" data-tip="Label verplicht&#10;Elke boekregel onder deze code hoort een evenementlabel [E…] te hebben. Regels zonder label komen bij de waarschuwingen.">Label verplicht</span></th>
-          <th>Project in Moneybird</th><th>Laatst gebruikt in</th><th><span class="visually-hidden">Verwijderen</span></th></tr></thead>
+          <th>Project in Moneybird</th><th>Geboekt in periode</th><th><span class="visually-hidden">Verwijderen</span></th></tr></thead>
         <tbody>
         {% for r in c.rows %}
           <tr data-code="{{ r.code }}">
@@ -85,9 +85,8 @@
               {% else %}{% if not projects_error %}<span class="none">geen project</span>{% endif %}{% endfor %}
             </td>
             <td class="usage">
-              {% if r.last_used == "actief" %}<span class="active">actief</span>
-              {% elif r.last_used %}{{ r.last_used }}
-              {% elif not projects_error %}<span class="none">nog niet gebruikt</span>{% endif %}
+              {% if r.booked %}<span class="active">actief</span>
+              {% elif not projects_error %}<span class="none">geen boekingen</span>{% endif %}
             </td>
             <td class="action">
               {% if r.deletable %}
