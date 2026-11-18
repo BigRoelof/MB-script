@@ -20,7 +20,7 @@ cp .env.example .env && chmod 600 .env   # token invullen; alleen nodig voor liv
 .venv/bin/python dashboard.py     # open http://127.0.0.1:5000
 ```
 
-Periode en bron kies je in het **menu linksboven**; daar staan ook **Opnieuw ophalen** en de links naar Begroting en Codes. Zonder token kies je **Testdata** als bron (`tests/fixtures`, alleen collegejaar 2026-2027). Opgehaalde gegevens blijven in het geheugen tot je op **Opnieuw ophalen** klikt. Wijzigingen in `config.toml`, `codes.csv` en `events.csv` zie je na herladen van de pagina. Het dashboard is alleen bereikbaar vanaf je eigen computer.
+Periode en bron kies je in het **menu linksboven**; daar staan ook **Opnieuw ophalen** en de links naar Begroting, Codes en Evenementen. Zonder token kies je **Testdata** als bron (`tests/fixtures`, alleen collegejaar 2026-2027). Opgehaalde gegevens blijven in het geheugen tot je op **Opnieuw ophalen** klikt. Wijzigingen in `config.toml`, `codes.csv` en `events.csv` zie je na herladen van de pagina. Het dashboard is alleen bereikbaar vanaf je eigen computer.
 
 ## Hoe de groepering werkt
 
@@ -36,7 +36,17 @@ Welke code bij welke regelnaam hoort, staat in **`codes.csv`** (kolommen `code,n
 
 ## Evenementen
 
-Een boekregel hoort bij een evenement via het label `[E<id>]` (event-id uit concrexit), in de omschrijving van de regel of in de naam van het document. In de documentnaam mag het tussen haken (zo pusht concrexit, bijv. `Food Maandborrel September [9107] [E1202]`) of los erachter, zoals je het zelf typt: `2627017 E1206` of `F2627001 E1205` (met hoofdletter E). Noemt een documentnaam meer dan één evenement, dan zet je het label per regel in de omschrijving. Naam, datum en organizer komen uit **`events.csv`** (export uit concrexit, kolommen `id,name,organizer,date`), standaard naast het script. Per organizer komt er een tabel met zijn evenementen. In `config.toml` staan onder `[events]` de codes waar elke regel een label hoort te hebben (`label_codes`) en optioneel nettere organizernamen (`[events.organizers]`).
+Een boekregel hoort bij een evenement via het label `[E<id>]` (event-id uit concrexit), in de omschrijving van de regel of in de naam van het document. In de documentnaam mag het tussen haken (zo pusht concrexit, bijv. `Food Maandborrel September [9107] [E1202]`) of los erachter, zoals je het zelf typt: `2627017 E1206` of `F2627001 E1205` (met hoofdletter E). Noemt een documentnaam meer dan één evenement, dan zet je het label per regel in de omschrijving. Naam, datum en organizer komen uit **`events.csv`** (kolommen `id,name,organizer,date`, optioneel `organizer_name`), standaard naast het script. Per organizer komt er een tabel met zijn evenementen. In `config.toml` staan onder `[events]` de codes waar elke regel een label hoort te hebben (`label_codes`) en optioneel nettere organizernamen (`[events.organizers]`).
+
+### Evenementen ophalen uit concrexit
+
+`events.csv` hoef je niet met de hand bij te houden: het script haalt de evenementen op uit concrexit, ook de ongepubliceerde.
+
+1. Maak in de Django-admin van concrexit (OAuth2 provider → Access tokens) een token aan voor je eigen account, met scope `events:admin`. Je account heeft staff-status en het recht `events.view_event` nodig.
+2. Zet het in `.env`: `CONCREXIT_TOKEN=...` (zie `.env.example`).
+3. In het dashboard: menu → **Evenementen**. Je ziet eerst wat er nieuw en gewijzigd is; met **events.csv bijwerken** wordt het opgeslagen. Met het script: `python3 jaarverslag.py --sync-events`.
+
+Concrexit is de bron: nieuwe en gewijzigde evenementen in de gekozen periode worden overgenomen. Een evenement dat wel in `events.csv` staat maar niet in concrexit, blijft staan met een waarschuwing, omdat er nog boekingen aan kunnen hangen. Als organizer komt de **pk** van de eerste organiserende groep in de kolom `organizer`, met de groepsnaam in `organizer_name`. Een nettere naam geef je in `config.toml` onder `[events.organizers]` op de pk (bijv. `12 = "BorrelCie"`). Heeft een evenement meer dan één organisator, dan krijg je een waarschuwing. Tegen staging testen kan met `url` onder `[concrexit]` in `config.toml`.
 
 ## Begroting
 
@@ -77,6 +87,7 @@ Opties:
 - `--codes BESTAND`: ander codebestand (standaard `codes.csv`).
 - `--out MAP`: waar de bestanden komen (standaard `output`).
 - `--events BESTAND`: andere evenementenlijst (standaard `events.csv` naast het script, of in de `--fixtures`-map).
+- `--sync-events`: eerst de evenementen in de periode uit concrexit ophalen en de evenementenlijst bijwerken (`CONCREXIT_TOKEN` in `.env`).
 - `--budget BESTAND`: andere begroting (standaard `begroting/<collegejaar>.csv`, het jaar waarin `--start` valt).
 - `--no-budget`: zonder begroting (tabellen zonder budgetkolommen).
 - `--fixtures tests/fixtures`: draaien op opgeslagen testdata, zonder token.
@@ -100,8 +111,8 @@ Bij een `AFWIJKING` eindigt het script met exitcode 1 (de tabellen worden wel ge
 
 ## Code en tests
 
-- `jaarverslag.py` is het commando; het rekenwerk staat in het pakket **`verslag/`** (één module per onderwerp: `errors`, `moneybird`, `config`, `budget`, `results`, `events`, `latex`, `report`; zie de docstring in `verslag/__init__.py`).
-- `dashboard.py` start de webapp; de code daarvan staat in **`web/`** (startpagina en downloads in `pages.py`, de begroting in `budget.py`). Templates en stijlen staan in `templates/` en `static/`.
+- `jaarverslag.py` is het commando; het rekenwerk staat in het pakket **`verslag/`** (één module per onderwerp: `errors`, `moneybird`, `config`, `budget`, `results`, `events`, `concrexit`, `latex`, `report`; zie de docstring in `verslag/__init__.py`).
+- `dashboard.py` start de webapp; de code daarvan staat in **`web/`** (startpagina en downloads in `pages.py`, de begroting in `budget.py`, codes in `codes.py`, evenementen ophalen in `events.py`). Templates en stijlen staan in `templates/` en `static/`.
 - Tests (eenmalig `.venv/bin/pip install -r requirements-dev.txt`):
   ```sh
   .venv/bin/python -m pytest

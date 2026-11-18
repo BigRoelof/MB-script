@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import csv
 import datetime as dt
+import io
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,7 +29,14 @@ COST_LEDGER_TYPES = {"expenses", "direct_costs", "other_income_expenses"}
 class Event:
     name: str
     date: dt.date
-    organizer: str
+    organizer: str            # sleutel voor [events.organizers]: de pk van de groep in concrexit (of een eigen code)
+    organizer_name: str = ""  # naam van de groep in concrexit; gebruikt als er geen nette naam in config.toml staat
+
+    def heading(self, organizer_names: dict[str, str]) -> str:
+        return organizer_names.get(self.organizer) or self.organizer_name or self.organizer
+
+
+EVENT_COLUMNS = ["id", "name", "organizer", "organizer_name", "date"]
 
 
 def parse_date(text: str) -> dt.date:
@@ -40,7 +49,7 @@ def parse_date(text: str) -> dt.date:
 
 
 def load_events(path: Path) -> dict[str, Event]:
-    """Leest de evenementenexport uit concrexit (kolommen id,name,organizer,date)."""
+    """Leest de evenementenlijst (kolommen id,name,organizer,date, optioneel organizer_name)."""
     lines = [ln for ln in path.read_text(encoding="utf-8-sig").splitlines()
              if ln.strip() and not ln.lstrip().startswith("#")]
     delimiter = ";" if lines and lines[0].count(";") > lines[0].count(",") else ","
@@ -57,8 +66,29 @@ def load_events(path: Path) -> dict[str, Event]:
         except ValueError:
             raise VerslagError(f"{path.name}: event {event_id} heeft geen geldige datum ('{rec.get('date')}').")
         organizer = (rec.get("organizer") or "").strip() or "Other"
-        events[event_id] = Event(name or f"Event {event_id}", date, organizer)
+        events[event_id] = Event(name or f"Event {event_id}", date, organizer,
+                                 (rec.get("organizer_name") or "").strip())
     return events
+
+
+def write_events(path: Path, events: dict[str, Event]) -> None:
+    """Schrijft de evenementenlijst, op datum, via een tijdelijk bestand. Commentaarregels bovenin blijven staan."""
+    header = []
+    if path.exists():
+        for line in path.read_text(encoding="utf-8-sig").splitlines():
+            if not line.lstrip().startswith("#"):
+                break
+            header.append(line)
+    out = io.StringIO()
+    for line in header:
+        out.write(line + "\n")
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow(EVENT_COLUMNS)
+    for event_id, e in sorted(events.items(), key=lambda kv: (kv[1].date, int(kv[0]))):
+        writer.writerow([event_id, e.name, e.organizer, e.organizer_name, e.date.isoformat()])
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(out.getvalue(), encoding="utf-8")
+    os.replace(tmp, path)
 
 
 def find_events(events_arg: Path | None, fixtures: Path | None) -> Path:
@@ -178,7 +208,7 @@ def organizer_groups(lines: list[EventLine], events: dict[str, Event], start: dt
     by_organizer: dict[str, list[str]] = {}
     for event_id, e in events.items():
         if event_id in per_event or start <= e.date <= end:
-            by_organizer.setdefault(organizer_names.get(e.organizer, e.organizer), []).append(event_id)
+            by_organizer.setdefault(e.heading(organizer_names), []).append(event_id)
 
     result = []
     for heading, ids in by_organizer.items():

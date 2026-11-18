@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thalia evenementen</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+<script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
+</head>
+<body class="events-page">
+<header class="topbar">
+  {% set page = "evenementen" %}{% include "_menu.html" %}
+  <a class="wordmark" href="{{ url_for('pages.index', **s.query()) }}">Thalia<span>Evenementen</span></a>
+  <div class="actions"></div>
+</header>
+
+{% macro organizer(e) %}{{ e.heading(names) }}{% if e.organizer != e.heading(names) %}<span class="code">{{ e.organizer }}</span>{% endif %}{% endmacro %}
+
+<main class="layout single">
+  <section class="hero">
+    <h1 class="page-title">Evenementen uit concrexit</h1>
+    <p class="lede">Haalt alle evenementen van {{ s.start.strftime('%d-%m-%Y') }} t/m {{ s.end.strftime('%d-%m-%Y') }}
+      op uit <code>{{ concrexit_url or 'concrexit' }}</code>, ook de ongepubliceerde, en werkt <code>{{ events_file }}</code> bij.
+      Een evenement dat alleen in <code>{{ events_file }}</code> staat, blijft staan.</p>
+
+    {% if error %}
+    <div class="banner warn" role="alert"><strong>Ophalen mislukt.</strong> {{ error }}</div>
+    {% elif not has_concrexit_token %}
+    <div class="steps">
+      <strong>Nog geen concrexit-token</strong>
+      <ol>
+        <li>Maak in de Django-admin van concrexit (OAuth2 provider → Access tokens) een token aan voor je eigen account, met scope <code>events:admin</code>.</li>
+        <li>Zet het in <code>.env</code> naast het script: <code>CONCREXIT_TOKEN=...</code></li>
+        <li>Herstart het dashboard.</li>
+      </ol>
+      <p class="note">Je account heeft staff-status en het recht <code>events.view_event</code> nodig.</p>
+    </div>
+    {% elif result %}
+    <p class="banner{{ ' warn' if result.warnings }}" role="status">
+      {% if result.written %}<strong><code>{{ events_file }}</code> is bijgewerkt.</strong>
+      {% elif not result.has_changes %}<strong><code>{{ events_file }}</code> is al bij.</strong>
+      {% endif %}{{ summary }}.</p>
+    {% if result.has_changes and not result.written %}
+    <form method="post" action="{{ url_for('events.events_sync', **s.query()) }}">
+      <button type="submit" class="primary">{{ events_file }} bijwerken</button>
+    </form>
+    {% endif %}
+    {% endif %}
+  </section>
+
+  {% if result %}
+  {% if result.warnings %}
+  <section class="sync-section" aria-labelledby="h-warnings">
+    <h2 id="h-warnings">Let op</h2>
+    <ul class="banner warn sync-warnings">{% for w in result.warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  {% if result.added %}
+  <section class="sync-section" aria-labelledby="h-added">
+    <h2 id="h-added">{{ 'Toegevoegd' if result.written else 'Nieuw' }} <span class="code">{{ result.added|length }}</span></h2>
+    <table class="money sync-table">
+      <thead><tr><th>Event</th><th>Datum</th><th>Organizer</th></tr></thead>
+      <tbody>
+      {% for i in result.added %}{% set e = result.merged[i] %}
+        <tr><td><span class="code">E{{ i }}</span> {{ e.name }}{% if i in result.unpublished %} <span class="tag">ongepubliceerd</span>{% endif %}</td>
+          <td class="date">{{ e.date.strftime('%d-%m-%Y') }}</td><td>{{ organizer(e) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {% if result.changed %}
+  <section class="sync-section" aria-labelledby="h-changed">
+    <h2 id="h-changed">Gewijzigd <span class="code">{{ result.changed|length }}</span></h2>
+    <table class="money sync-table">
+      <thead><tr><th>Event</th><th>Datum</th><th>Organizer</th></tr></thead>
+      <tbody>
+      {% for i, old, new in result.changed %}
+        <tr><td><span class="code">E{{ i }}</span>
+              {% if old.name != new.name %}<del>{{ old.name }}</del> {% endif %}{{ new.name }}{% if i in result.unpublished %} <span class="tag">ongepubliceerd</span>{% endif %}</td>
+          <td class="date">{% if old.date != new.date %}<del>{{ old.date.strftime('%d-%m-%Y') }}</del> {% endif %}{{ new.date.strftime('%d-%m-%Y') }}</td>
+          <td>{% if old.organizer != new.organizer or old.organizer_name != new.organizer_name %}<del>{{ organizer(old) }}</del> {% endif %}{{ organizer(new) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {% if result.missing %}
+  <section class="sync-section" aria-labelledby="h-missing">
+    <h2 id="h-missing">Alleen in {{ events_file }} <span class="code">{{ result.missing|length }}</span></h2>
+    <p class="note">Deze evenementen vallen in de periode maar staan niet in concrexit. Ze blijven staan; verwijder ze met de hand als er niets op geboekt is.</p>
+    <table class="money sync-table">
+      <thead><tr><th>Event</th><th>Datum</th><th>Organizer</th></tr></thead>
+      <tbody>
+      {% for i in result.missing %}{% set e = result.merged[i] %}
+        <tr><td><span class="code">E{{ i }}</span> {{ e.name }}</td>
+          <td class="date">{{ e.date.strftime('%d-%m-%Y') }}</td><td>{{ organizer(e) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+  {% endif %}
+</main>
+</body>
+</html>

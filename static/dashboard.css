@@ -603,3 +603,14 @@ details .lines { margin-top: 0.75rem; }
   .layout { display: block; }
   .lines-row[hidden] { display: none; }
 }
+
+/* ---------- Evenementen uit concrexit ---------- */
+
+.sync-section { margin-top: 2.5rem; }
+.sync-section h2 { margin-bottom: 0.75rem; }
+.sync-section h2 .code { font-size: 1rem; margin-left: 0.35rem; font-weight: 500; }
+.sync-table th, .sync-table td { text-align: left; white-space: normal; }
+.sync-table td.date { white-space: nowrap; }
+.sync-table del { color: var(--muted); }
+.sync-warnings { padding-left: 2rem; }
+.sync-warnings li + li { margin-top: 0.3rem; }
