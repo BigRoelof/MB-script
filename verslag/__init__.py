@@ -9,6 +9,7 @@ Modules, van onder naar boven (elke module gebruikt alleen modules die eerder in
 - budget      de begroting per collegejaar (begroting/<jaar>.csv)
 - results     de tabellen per categorie, de controles daarop en of alles verwerkt is
 - events      evenementlabels [E…], events.csv en de tabellen per organizer
+- concrexit   evenementen ophalen uit concrexit (thalia.nu) en events.csv bijwerken
 - latex       de LaTeX-uitvoer
 - report      voegt alles samen tot één Report
 """

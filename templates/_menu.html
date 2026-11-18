@@ -1,5 +1,5 @@
 {# Uitklapmenu linksboven, op elke pagina hetzelfde. Verwacht `s` (Settings) en `page`
-   ("dashboard", "begroting" of "codes"); `fetched_at` is optioneel. #}
+   ("dashboard", "begroting", "codes" of "evenementen"); `fetched_at` is optioneel. #}
 <details class="menu">
   <summary aria-label="Menu">
     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4h11M2.5 8h11M2.5 12h11"/></svg>
@@ -38,6 +38,7 @@
       <a href="{{ url_for('pages.index', **s.query()) }}" {% if page == 'dashboard' %}aria-current="page"{% endif %}>Dashboard</a>
       <a href="{{ url_for('begroting.budget_page', **s.query()) }}" {% if page == 'begroting' %}aria-current="page"{% endif %}>Begroting</a>
       <a href="{{ url_for('codes.codes_page', **s.query()) }}" {% if page == 'codes' %}aria-current="page"{% endif %}>Codes</a>
+      <a href="{{ url_for('events.events_page', **s.query()) }}" {% if page == 'evenementen' %}aria-current="page"{% endif %}>Evenementen</a>
     </nav>
   </div>
 </details>
