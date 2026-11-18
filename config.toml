@@ -70,7 +70,10 @@ label_codes = [
 # Waarschuwing als de boekingsdatum meer dan zoveel dagen van de evenementdatum afligt.
 max_days = 60
 
-# Optioneel: nettere namen voor de organizers uit events.csv in het verslag.
+# Optioneel: nettere namen voor de organizers in het verslag. De sleutel is de organizer-kolom
+# van events.csv: bij evenementen uit concrexit de pk van de groep (bijv. 12 = "BorrelCie").
+# Zonder naam hier wordt de groepsnaam uit concrexit gebruikt (kolom organizer_name).
+# De afkortingen hieronder horen bij de verzonnen evenementen in de sandbox.
 [events.organizers]
 CAD = "BorrelCie"
 EVC = "Events Committee"
@@ -80,3 +83,7 @@ TECHNICIE = "TechniCie"
 ALU = "Alumni"
 WINECIE = "Wine Tasting"
 
+# Concrexit (thalia.nu), voor het ophalen van de evenementen (--sync-events, of /evenementen in het dashboard).
+# Voor testen tegen staging: url = "https://staging.thalia.nu"
+[concrexit]
+url = "https://thalia.nu"

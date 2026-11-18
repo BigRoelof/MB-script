@@ -21,6 +21,7 @@ from pathlib import Path
 
 from verslag.amounts import Row, fmt_plain
 from verslag.budget import find_budget, load_budget
+from verslag.concrexit import make_concrexit_client, summary, sync_events
 from verslag.config import load_config, validate_period
 from verslag.errors import VerslagError
 from verslag.events import find_events
@@ -48,6 +49,9 @@ def parse_args(argv=None):
     p.add_argument("--no-budget", action="store_true", help="geen begroting gebruiken")
     p.add_argument("--out", type=Path, default=Path("output"))
     p.add_argument("--fixtures", type=Path, help="map met opgeslagen API-antwoorden (testen zonder token)")
+    p.add_argument("--sync-events", action="store_true",
+                   help="eerst de evenementen in de periode uit concrexit ophalen en events.csv bijwerken "
+                        "(CONCREXIT_TOKEN in .env, scope events:admin)")
     return p.parse_args(argv)
 
 
@@ -66,11 +70,18 @@ def run(args) -> int:
     validate_period(args.start, args.end)
     cfg, label_codes = load_config(args.config, args.codes)
     client = make_client(cfg, args.fixtures)
+    events_path = find_events(args.events, args.fixtures)
+
+    if args.sync_events:
+        print(f"Evenementen ophalen uit concrexit naar {events_path}...", file=sys.stderr)
+        result = sync_events(make_concrexit_client(cfg), events_path, args.start, args.end)
+        print(f"  {summary(result)}" + ("" if result.written else "; events.csv niet veranderd"), file=sys.stderr)
+        for w in result.warnings:
+            print(f"  - {w}", file=sys.stderr)
 
     print(f"Periode {args.start:%d-%m-%Y} t/m {args.end:%d-%m-%Y}", file=sys.stderr)
     print("Gegevens ophalen uit Moneybird...", file=sys.stderr)
     data = fetch_data(client, args.start, args.end)
-    events_path = find_events(args.events, args.fixtures)
     if args.no_budget:
         budget = None
     elif args.budget:

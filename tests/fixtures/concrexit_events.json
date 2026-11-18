@@ -1,0 +1,12 @@
+[
+  {"pk": 1201, "title": "Introductieborrel eerstejaars", "start": "2026-09-03T16:00:00+02:00", "end": "2026-09-03T23:00:00+02:00",
+   "published": true, "organisers": [{"pk": 12, "name": "Borrel Committee"}]},
+  {"pk": 1202, "title": "Maandborrel September", "start": "2026-09-17T16:00:00+02:00", "end": "2026-09-17T23:00:00+02:00",
+   "published": true, "organisers": [{"pk": 12, "name": "Borrel Committee"}]},
+  {"pk": 1204, "title": "Turing diner", "start": "2026-09-24T23:30:00+02:00", "end": "2026-09-25T02:00:00+02:00",
+   "published": true, "organisers": [{"pk": 31, "name": "Turing Committee"}, {"pk": 12, "name": "Borrel Committee"}]},
+  {"pk": 1214, "title": "Bestuurswissel-borrel", "start": "2027-06-10T16:00:00+02:00", "end": "2027-06-10T23:00:00+02:00",
+   "published": false, "organisers": [{"pk": 12, "name": "Borrel Committee"}]},
+  {"pk": 1215, "title": "Ledenvergadering", "start": "2027-07-01T19:00:00+02:00", "end": "2027-07-01T22:00:00+02:00",
+   "published": true, "organisers": []}
+]
